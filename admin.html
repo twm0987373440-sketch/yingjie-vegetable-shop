@@ -1,1 +1,77 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>英姐蔬果商行｜後台</title><link rel="stylesheet" href="style.css"></head><body><header><b>⚙️ 英姐蔬果商行｜後台</b><a href="index.html">回前台</a></header><main><section id="login" class="panel"><h2>後台登入</h2><input id="pw" type="password" placeholder="管理密碼"><button id="loginBtn">登入</button><p id="msg"></p></section><section id="panel" hidden><div class="tabs"><button id="pt">商品管理</button><button id="ot">訂單管理</button></div><section class="panel"><h2>商品管理 <button id="add">＋新增</button></h2><div id="products"></div></section><section class="panel" id="ordersPanel" hidden><h2>訂單管理</h2><div id="orders"></div></section></section></main><script type="module" src="admin.js"></script></body></html>
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>英姐蔬果商行｜後台</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <b>⚙️ 英姐蔬果商行｜後台</b>
+  <a href="index.html">回前台</a>
+</header>
+
+<main>
+
+  <section id="login" class="panel">
+    <h2>管理員登入</h2>
+
+    <input
+      id="email"
+      type="email"
+      placeholder="管理員 Email"
+      autocomplete="username"
+    >
+
+    <input
+      id="password"
+      type="password"
+      placeholder="管理員密碼"
+      autocomplete="current-password"
+    >
+
+    <button id="loginBtn">登入</button>
+
+    <p id="msg"></p>
+  </section>
+
+
+  <section id="panel" hidden>
+
+    <div class="tabs">
+      <button id="pt">商品管理</button>
+      <button id="ot">訂單管理</button>
+      <button id="logoutBtn">登出</button>
+    </div>
+
+    <section class="panel">
+      <h2>
+        商品管理
+        <button id="add">＋新增</button>
+      </h2>
+
+      <div id="products"></div>
+    </section>
+
+
+    <section
+      class="panel"
+      id="ordersPanel"
+      hidden
+    >
+      <h2>訂單管理</h2>
+
+      <div id="orders"></div>
+    </section>
+
+  </section>
+
+</main>
+
+<script type="module" src="admin.js"></script>
+
+</body>
+</html>
