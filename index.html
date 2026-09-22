@@ -1,86 +1,278 @@
 <!doctype html>
+
 <html lang="zh-Hant">
+
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>英姐蔬果商行｜每日蔬菜訂購</title>
-  <link rel="stylesheet" href="style.css">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+
+  <title>
+    英姐蔬果商行｜每日蔬菜訂購
+  </title>
+
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+
 </head>
+
 
 <body>
 
+
 <header>
-  <b>🥬 英姐蔬果商行</b>
-  <a href="admin.html">後台</a>
+
+  <b>
+    🥬 英姐蔬果商行
+  </b>
+
+  <a href="admin.html">
+    後台
+  </a>
+
 </header>
+
 
 <main>
 
-  <section class="hero">
-    <h1>今日蔬菜</h1>
-    <p>選擇數量後加入購物車，確認資料即可送出訂單。</p>
+
+  <!-- LINE 會員 -->
+
+  <section
+    class="panel"
+    id="memberPanel"
+  >
+
+    <div id="memberLoggedOut">
+
+      <h2>
+        👤 會員
+      </h2>
+
+      <p>
+        使用 LINE 登入，之後可使用會員功能。
+      </p>
+
+      <a
+        id="lineLoginBtn"
+        href="https://yingjie-line-login.twm0987373440.workers.dev/login"
+        style="
+          display:block;
+          text-align:center;
+          padding:14px;
+          background:#06c755;
+          color:white;
+          text-decoration:none;
+          border-radius:10px;
+          font-size:18px;
+          font-weight:bold;
+        "
+      >
+        💬 使用 LINE 登入
+      </a>
+
+    </div>
+
+
+    <div
+      id="memberLoggedIn"
+      hidden
+    >
+
+      <div
+        style="
+          display:flex;
+          align-items:center;
+          gap:12px;
+        "
+      >
+
+        <img
+          id="memberPicture"
+          alt="會員頭像"
+          style="
+            width:52px;
+            height:52px;
+            border-radius:50%;
+            object-fit:cover;
+            display:none;
+          "
+        >
+
+        <div>
+
+          <div>
+            LINE 會員
+          </div>
+
+          <b
+            id="memberName"
+            style="
+              font-size:20px;
+            "
+          >
+          </b>
+
+        </div>
+
+      </div>
+
+
+      <button
+        id="memberLogout"
+        type="button"
+        style="
+          margin-top:12px;
+        "
+      >
+        登出會員
+      </button>
+
+    </div>
+
   </section>
 
-  <div id="status" class="notice">商品載入中…</div>
 
-  <section id="products" class="grid"></section>
+  <!-- 今日蔬菜 -->
+
+  <section class="hero">
+
+    <h1>
+      今日蔬菜
+    </h1>
+
+    <p>
+      選擇數量後加入購物車，確認資料即可送出訂單。
+    </p>
+
+  </section>
+
+
+  <div
+    id="status"
+    class="notice"
+  >
+    商品載入中…
+  </div>
+
+
+  <section
+    id="products"
+    class="grid"
+  >
+  </section>
+
+
+  <!-- 購物車 -->
 
   <section class="panel">
+
     <h2>
+
       🛒 訂購清單
-      <small id="count">0 項</small>
+
+      <small id="count">
+        0 項
+      </small>
+
     </h2>
 
-    <div id="cart"></div>
+
+    <div id="cart">
+    </div>
+
 
     <div class="total">
+
       合計
-      <b id="total">NT$0</b>
+
+      <b id="total">
+        NT$0
+      </b>
+
     </div>
+
   </section>
+
+
+  <!-- 訂購資料 -->
 
   <section class="panel">
 
-    <h2>訂購資料</h2>
+    <h2>
+      訂購資料
+    </h2>
+
 
     <label>
+
       姓名
-      <input id="name" placeholder="請輸入姓名">
+
+      <input
+        id="name"
+        placeholder="請輸入姓名"
+      >
+
     </label>
 
+
     <label>
+
       電話
+
       <input
         id="phone"
         type="tel"
-        placeholder="例如：0912345678"
+        placeholder="請輸入電話"
       >
+
     </label>
 
+
     <label>
+
       備註
+
       <textarea
         id="note"
         rows="3"
-        placeholder="如有其他需求請填寫"
+        placeholder="如有特殊需求可填寫"
       ></textarea>
+
     </label>
+
 
     <button id="submit">
       送出訂單
     </button>
 
-    <div id="result"></div>
+
+    <div id="result">
+    </div>
 
   </section>
 
+
 </main>
+
 
 <footer>
   © 英姐蔬果商行
 </footer>
 
-<script type="module" src="app.js"></script>
+
+<script
+  type="module"
+  src="app.js?v=20"
+></script>
+
 
 </body>
+
 </html>
