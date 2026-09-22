@@ -2,7 +2,6 @@ import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 
-
 import {
   getFirestore,
   collection,
@@ -10,7 +9,6 @@ import {
   addDoc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
-
 
 import {
   firebaseConfig
@@ -22,7 +20,6 @@ const WORKER_URL =
 
 
 const demo = [
-
   ["高麗菜", "斤", 35, "🥬"],
   ["青江菜", "把", 30, "🥬"],
   ["空心菜", "把", 25, "🌿"],
@@ -33,7 +30,6 @@ const demo = [
   ["紅蘿蔔", "斤", 35, "🥕"],
   ["馬鈴薯", "斤", 40, "🥔"],
   ["白蘿蔔", "條", 30, "🥕"]
-
 ].map(
   (item, index) => ({
     id: "d" + index,
@@ -49,31 +45,24 @@ const demo = [
 
 const configured =
   firebaseConfig.apiKey &&
-  !firebaseConfig.apiKey.startsWith(
-    "YOUR_"
-  );
+  !firebaseConfig.apiKey.startsWith("YOUR_");
 
 
 const db =
   configured
     ? getFirestore(
-        initializeApp(
-          firebaseConfig
-        )
+        initializeApp(firebaseConfig)
       )
     : null;
 
 
 let products = [];
 
-
 let cart =
   JSON.parse(
-    localStorage.getItem(
-      "yjcart"
-    ) || "{}"
+    localStorage.getItem("yjcart") ||
+    "{}"
   );
-
 
 let member = null;
 
@@ -87,9 +76,7 @@ const money =
   n =>
     "NT$" +
     Number(n || 0)
-      .toLocaleString(
-        "zh-TW"
-      );
+      .toLocaleString("zh-TW");
 
 
 const esc =
@@ -108,14 +95,112 @@ const esc =
 
 
 /* =========================
+   底部四頁導覽
+========================= */
+
+function showPage(pageName) {
+
+  const pages = [
+    "home",
+    "cart",
+    "member",
+    "store"
+  ];
+
+
+  pages.forEach(name => {
+
+    const page =
+      $(`page-${name}`);
+
+    if (!page) {
+      return;
+    }
+
+
+    if (name === pageName) {
+
+      page.hidden = false;
+
+      page.classList.add(
+        "active"
+      );
+
+    } else {
+
+      page.hidden = true;
+
+      page.classList.remove(
+        "active"
+      );
+
+    }
+
+  });
+
+
+  document
+    .querySelectorAll(
+      ".bottom-nav-item"
+    )
+    .forEach(button => {
+
+      button.classList.toggle(
+        "active",
+        button.dataset.page ===
+          pageName
+      );
+
+    });
+
+
+  window.scrollTo({
+    top: 0,
+    behavior: "smooth"
+  });
+
+}
+
+
+function initNavigation() {
+
+  document
+    .querySelectorAll(
+      ".bottom-nav-item"
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          const page =
+            button.dataset.page;
+
+          if (page) {
+
+            showPage(page);
+
+          }
+
+        }
+      );
+
+    });
+
+}
+
+
+/* =========================
    LINE 會員
 ========================= */
 
 async function initMember() {
 
   /*
-    LINE 登入成功後 Worker 會把 Token
-    放在網址 #member_token=...
+    LINE 登入成功後，
+    Worker 會把 Token 放在
+    #member_token=...
   */
 
   const hash =
@@ -147,8 +232,8 @@ async function initMember() {
 
 
     /*
-      清掉網址上的 token，
-      避免一直留在網址列。
+      Token 存好後清除網址，
+      避免 Token 一直留在網址列。
     */
 
     history.replaceState(
@@ -254,53 +339,77 @@ function showLoggedOut() {
   member = null;
 
 
-  $("memberLoggedOut").hidden =
-    false;
+  if ($("memberLoggedOut")) {
+
+    $("memberLoggedOut").hidden =
+      false;
+
+  }
 
 
-  $("memberLoggedIn").hidden =
-    true;
+  if ($("memberLoggedIn")) {
+
+    $("memberLoggedIn").hidden =
+      true;
+
+  }
 
 }
 
 
 function showLoggedIn(data) {
 
-  $("memberLoggedOut").hidden =
-    true;
+  if ($("memberLoggedOut")) {
+
+    $("memberLoggedOut").hidden =
+      true;
+
+  }
 
 
-  $("memberLoggedIn").hidden =
-    false;
+  if ($("memberLoggedIn")) {
+
+    $("memberLoggedIn").hidden =
+      false;
+
+  }
 
 
-  $("memberName").textContent =
-    `${data.name}，您好`;
+  if ($("memberName")) {
+
+    $("memberName").textContent =
+      `${data.name}，您好`;
+
+  }
 
 
-  if (data.picture) {
+  if ($("memberPicture")) {
 
-    $("memberPicture").src =
-      data.picture;
+    if (data.picture) {
 
+      $("memberPicture").src =
+        data.picture;
 
-    $("memberPicture").style.display =
-      "block";
+      $("memberPicture").style.display =
+        "block";
 
-  } else {
+    } else {
 
-    $("memberPicture").style.display =
-      "none";
+      $("memberPicture").style.display =
+        "none";
+
+    }
 
   }
 
 
   /*
-    姓名空白時，自動帶入 LINE 名稱。
-    使用者仍然可以自行修改。
+    訂購姓名空白時，
+    自動帶入 LINE 名稱。
   */
 
   if (
+    $("name") &&
     !$("name").value.trim()
   ) {
 
@@ -312,23 +421,27 @@ function showLoggedIn(data) {
 }
 
 
-$("memberLogout")
-  .addEventListener(
-    "click",
-    () => {
+if ($("memberLogout")) {
 
-      localStorage.removeItem(
-        "yj_member_token"
-      );
+  $("memberLogout")
+    .addEventListener(
+      "click",
+      () => {
+
+        localStorage.removeItem(
+          "yj_member_token"
+        );
 
 
-      member = null;
+        member = null;
 
 
-      showLoggedOut();
+        showLoggedOut();
 
-    }
-  );
+      }
+    );
+
+}
 
 
 /* =========================
@@ -341,9 +454,11 @@ async function loadProducts() {
 
     products = demo;
 
+
     setStatus(
       "目前為示範模式"
     );
+
 
     renderProducts();
 
@@ -420,8 +535,12 @@ async function loadProducts() {
 
 function setStatus(text) {
 
-  $("status").textContent =
-    text;
+  if ($("status")) {
+
+    $("status").textContent =
+      text;
+
+  }
 
 }
 
@@ -431,6 +550,11 @@ function setStatus(text) {
 ========================= */
 
 function renderProducts() {
+
+  if (!$("products")) {
+    return;
+  }
+
 
   $("products").innerHTML =
     products
@@ -559,7 +683,7 @@ function renderProducts() {
 
 
 /* =========================
-   數量
+   商品數量
 ========================= */
 
 function changeQty(
@@ -633,49 +757,203 @@ function renderCart() {
     );
 
 
-  $("count").textContent =
-    count + " 項";
+  if ($("count")) {
+
+    $("count").textContent =
+      count + " 項";
+
+  }
 
 
-  if (!items.length) {
+  /*
+    底部購物車數量徽章
+  */
 
-    $("cart").innerHTML =
-      "<p>尚未選擇商品</p>";
+  if ($("navCartBadge")) {
 
-  } else {
+    if (count > 0) {
 
-    $("cart").innerHTML =
-      items
-        .map(item => `
+      $("navCartBadge").hidden =
+        false;
 
-          <div class="row">
+      $("navCartBadge").textContent =
+        count > 99
+          ? "99+"
+          : String(count);
 
-            <span>
+    } else {
 
-              ${esc(
-                item.p.name
-              )}
+      $("navCartBadge").hidden =
+        true;
 
-              ×
-              ${item.qty}
+    }
 
-            </span>
+  }
 
-            <b>
 
-              ${money(
-                Number(
-                  item.p.price
-                ) *
-                item.qty
-              )}
+  if ($("cart")) {
 
-            </b>
+    if (!items.length) {
 
+      $("cart").innerHTML = `
+        <div class="empty-cart">
+
+          <div class="empty-cart-icon">
+            🛒
           </div>
 
-        `)
-        .join("");
+          <p>
+            購物車目前是空的
+          </p>
+
+          <button
+            id="goShoppingButton"
+            class="secondary-button"
+            type="button"
+          >
+            去選購蔬菜
+          </button>
+
+        </div>
+      `;
+
+
+      const shoppingButton =
+        $("goShoppingButton");
+
+
+      if (shoppingButton) {
+
+        shoppingButton.addEventListener(
+          "click",
+          () => {
+
+            showPage("home");
+
+          }
+        );
+
+      }
+
+
+    } else {
+
+      $("cart").innerHTML =
+        items
+          .map(item => `
+
+            <div class="cart-item">
+
+              <div class="cart-item-main">
+
+                <div>
+
+                  <b>
+                    ${esc(
+                      item.p.name
+                    )}
+                  </b>
+
+                  <small>
+                    ${money(
+                      item.p.price
+                    )}
+                    /
+                    ${esc(
+                      item.p.unit ||
+                      "份"
+                    )}
+                  </small>
+
+                </div>
+
+
+                <b class="cart-item-price">
+
+                  ${money(
+                    Number(
+                      item.p.price
+                    ) *
+                    item.qty
+                  )}
+
+                </b>
+
+              </div>
+
+
+              <div class="cart-item-actions">
+
+                <button
+                  class="cart-minus"
+                  data-id="${item.p.id}"
+                  type="button"
+                >
+                  −
+                </button>
+
+                <b>
+                  ${item.qty}
+                </b>
+
+                <button
+                  class="cart-plus"
+                  data-id="${item.p.id}"
+                  type="button"
+                >
+                  ＋
+                </button>
+
+              </div>
+
+            </div>
+
+          `)
+          .join("");
+
+
+      document
+        .querySelectorAll(
+          ".cart-minus"
+        )
+        .forEach(button => {
+
+          button.addEventListener(
+            "click",
+            () => {
+
+              changeQty(
+                button.dataset.id,
+                -1
+              );
+
+            }
+          );
+
+        });
+
+
+      document
+        .querySelectorAll(
+          ".cart-plus"
+        )
+        .forEach(button => {
+
+          button.addEventListener(
+            "click",
+            () => {
+
+              changeQty(
+                button.dataset.id,
+                1
+              );
+
+            }
+          );
+
+        });
+
+    }
 
   }
 
@@ -692,8 +970,12 @@ function renderCart() {
     );
 
 
-  $("total").textContent =
-    money(total);
+  if ($("total")) {
+
+    $("total").textContent =
+      money(total);
+
+  }
 
 }
 
@@ -702,240 +984,248 @@ function renderCart() {
    送出訂單
 ========================= */
 
-$("submit")
-  .addEventListener(
-    "click",
-    async () => {
+if ($("submit")) {
 
-      const items =
-        Object.values(cart);
+  $("submit")
+    .addEventListener(
+      "click",
+      async () => {
 
-
-      const name =
-        $("name")
-          .value
-          .trim();
+        const items =
+          Object.values(cart);
 
 
-      const phone =
-        $("phone")
-          .value
-          .trim();
+        const name =
+          $("name")
+            .value
+            .trim();
 
 
-      const note =
-        $("note")
-          .value
-          .trim();
+        const phone =
+          $("phone")
+            .value
+            .trim();
 
 
-      if (!items.length) {
-
-        alert(
-          "請先選擇商品"
-        );
-
-        return;
-
-      }
+        const note =
+          $("note")
+            .value
+            .trim();
 
 
-      if (!name || !phone) {
+        if (!items.length) {
 
-        alert(
-          "請填寫姓名與電話"
-        );
-
-        return;
-
-      }
-
-
-      const total =
-        items.reduce(
-          (sum, item) =>
-            sum +
-            Number(
-              item.p.price
-            ) *
-            item.qty,
-          0
-        );
-
-
-      const order = {
-
-        customerName:
-          name,
-
-        customerPhone:
-          phone,
-
-        note,
-
-        items:
-          items.map(item => ({
-
-            name:
-              item.p.name,
-
-            unit:
-              item.p.unit,
-
-            price:
-              Number(
-                item.p.price
-              ),
-
-            qty:
-              item.qty
-
-          })),
-
-        total,
-
-        status:
-          "new",
-
-        /*
-          目前只記錄是否透過會員登入。
-          下一階段再安全綁定會員訂單查詢。
-        */
-
-        memberLoggedIn:
-          Boolean(member)
-
-      };
-
-
-      $("submit").disabled =
-        true;
-
-
-      $("submit").textContent =
-        "訂單送出中...";
-
-
-      try {
-
-        let orderId = "";
-
-
-        if (db) {
-
-          const result =
-            await addDoc(
-              collection(
-                db,
-                "orders"
-              ),
-              {
-                ...order,
-
-                createdAt:
-                  serverTimestamp()
-              }
-            );
-
-
-          orderId =
-            result.id;
-
-        } else {
-
-          orderId =
-            "DEMO-" +
-            Date.now();
-
-
-          localStorage.setItem(
-            "lastOrder",
-            JSON.stringify(
-              order
-            )
+          alert(
+            "請先選擇商品"
           );
+
+          showPage("home");
+
+          return;
 
         }
 
 
-        cart = {};
+        if (!name || !phone) {
+
+          alert(
+            "請填寫姓名與電話"
+          );
+
+          return;
+
+        }
 
 
-        localStorage.removeItem(
-          "yjcart"
-        );
+        const total =
+          items.reduce(
+            (sum, item) =>
+              sum +
+              Number(
+                item.p.price
+              ) *
+              item.qty,
+            0
+          );
 
 
-        renderProducts();
+        const order = {
 
+          customerName:
+            name,
 
-        $("result").innerHTML = `
+          customerPhone:
+            phone,
 
-          <div class="ok">
+          note,
 
-            <b>
-              訂單已送出！
-            </b>
+          items:
+            items.map(item => ({
 
-            <br>
+              name:
+                item.p.name,
 
-            金額：
-            ${money(total)}
+              unit:
+                item.p.unit,
 
-            <br>
+              price:
+                Number(
+                  item.p.price
+                ),
 
-            <small>
-              訂單編號：
-              ${esc(
-                makeOrderNumber(
-                  orderId
-                )
-              )}
-            </small>
+              qty:
+                item.qty
 
-          </div>
+            })),
 
-        `;
+          total,
 
+          status:
+            "new",
 
-        $("note").value =
-          "";
+          memberLoggedIn:
+            Boolean(member)
 
+        };
 
-      } catch (error) {
-
-        console.error(
-          "訂單送出失敗：",
-          error
-        );
-
-
-        alert(
-          "訂單送出失敗，請稍後再試"
-        );
-
-      } finally {
 
         $("submit").disabled =
-          false;
+          true;
 
 
         $("submit").textContent =
-          "送出訂單";
+          "訂單送出中...";
+
+
+        try {
+
+          let orderId = "";
+
+
+          if (db) {
+
+            const result =
+              await addDoc(
+                collection(
+                  db,
+                  "orders"
+                ),
+                {
+                  ...order,
+
+                  createdAt:
+                    serverTimestamp()
+                }
+              );
+
+
+            orderId =
+              result.id;
+
+
+          } else {
+
+            orderId =
+              "DEMO-" +
+              Date.now();
+
+
+            localStorage.setItem(
+              "lastOrder",
+              JSON.stringify(order)
+            );
+
+          }
+
+
+          cart = {};
+
+
+          localStorage.removeItem(
+            "yjcart"
+          );
+
+
+          renderProducts();
+
+
+          $("result").innerHTML = `
+
+            <div class="ok">
+
+              <div
+                style="
+                  font-size:42px;
+                  margin-bottom:10px;
+                "
+              >
+                ✅
+              </div>
+
+              <b>
+                訂單已送出！
+              </b>
+
+              <br><br>
+
+              金額：
+              ${money(total)}
+
+              <br>
+
+              <small>
+                訂單編號：
+                ${esc(
+                  makeOrderNumber(
+                    orderId
+                  )
+                )}
+              </small>
+
+            </div>
+
+          `;
+
+
+          $("note").value =
+            "";
+
+
+        } catch (error) {
+
+          console.error(
+            "訂單送出失敗：",
+            error
+          );
+
+
+          alert(
+            "訂單送出失敗，請稍後再試"
+          );
+
+
+        } finally {
+
+          $("submit").disabled =
+            false;
+
+
+          $("submit").textContent =
+            "確認送出訂單";
+
+        }
 
       }
+    );
 
-    }
-  );
+}
 
 
 /* =========================
    顯示用訂單編號
 ========================= */
 
-function makeOrderNumber(
-  id
-) {
+function makeOrderNumber(id) {
 
   const now =
     new Date();
@@ -988,14 +1278,26 @@ function makeOrderNumber(
 
 
 /* =========================
-   啟動
+   啟動網站
 ========================= */
 
 async function start() {
 
+  initNavigation();
+
+
+  showPage(
+    "home"
+  );
+
+
   await initMember();
 
+
   await loadProducts();
+
+
+  renderCart();
 
 }
 
