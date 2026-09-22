@@ -6,7 +6,9 @@ import {
   getFirestore,
   collection,
   getDocs,
+  getDoc,
   addDoc,
+  doc,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
@@ -19,29 +21,9 @@ const WORKER_URL =
   "https://yingjie-line-login.twm0987373440.workers.dev";
 
 
-const demo = [
-  ["高麗菜", "斤", 35, "🥬"],
-  ["青江菜", "把", 30, "🥬"],
-  ["空心菜", "把", 25, "🌿"],
-  ["小白菜", "把", 25, "🥬"],
-  ["菠菜", "把", 35, "🌿"],
-  ["青椒", "斤", 55, "🫑"],
-  ["洋蔥", "斤", 30, "🧅"],
-  ["紅蘿蔔", "斤", 35, "🥕"],
-  ["馬鈴薯", "斤", 40, "🥔"],
-  ["白蘿蔔", "條", 30, "🥕"]
-].map(
-  (item, index) => ({
-    id: "d" + index,
-    name: item[0],
-    unit: item[1],
-    price: item[2],
-    emoji: item[3],
-    active: true,
-    sort: index
-  })
-);
-
+/* =========================
+   Firebase
+========================= */
 
 const configured =
   firebaseConfig.apiKey &&
@@ -56,7 +38,57 @@ const db =
     : null;
 
 
+/* =========================
+   示範商品
+========================= */
+
+const demo = [
+
+  ["高麗菜", "斤", 35, "🥬"],
+  ["青江菜", "把", 30, "🥬"],
+  ["空心菜", "把", 25, "🌿"],
+  ["小白菜", "把", 25, "🥬"],
+  ["菠菜", "把", 35, "🌿"],
+  ["青椒", "斤", 55, "🫑"],
+  ["洋蔥", "斤", 30, "🧅"],
+  ["紅蘿蔔", "斤", 35, "🥕"],
+  ["馬鈴薯", "斤", 40, "🥔"],
+  ["白蘿蔔", "條", 30, "🥕"]
+
+].map(
+  (item, index) => ({
+
+    id:
+      "d" + index,
+
+    name:
+      item[0],
+
+    unit:
+      item[1],
+
+    price:
+      item[2],
+
+    emoji:
+      item[3],
+
+    active:
+      true,
+
+    sort:
+      index
+
+  })
+);
+
+
+/* =========================
+   資料
+========================= */
+
 let products = [];
+
 
 let cart =
   JSON.parse(
@@ -64,8 +96,13 @@ let cart =
     "{}"
   );
 
+
 let member = null;
 
+
+/* =========================
+   共用工具
+========================= */
 
 const $ =
   id =>
@@ -95,7 +132,7 @@ const esc =
 
 
 /* =========================
-   底部四頁導覽
+   底部四頁
 ========================= */
 
 function showPage(pageName) {
@@ -113,6 +150,7 @@ function showPage(pageName) {
     const page =
       $(`page-${name}`);
 
+
     if (!page) {
       return;
     }
@@ -120,15 +158,20 @@ function showPage(pageName) {
 
     if (name === pageName) {
 
-      page.hidden = false;
+      page.hidden =
+        false;
+
 
       page.classList.add(
         "active"
       );
 
+
     } else {
 
-      page.hidden = true;
+      page.hidden =
+        true;
+
 
       page.classList.remove(
         "active"
@@ -177,6 +220,7 @@ function initNavigation() {
           const page =
             button.dataset.page;
 
+
           if (page) {
 
             showPage(page);
@@ -192,16 +236,204 @@ function initNavigation() {
 
 
 /* =========================
+   店家資訊
+========================= */
+
+async function loadStoreSettings() {
+
+  if (!db) {
+    return;
+  }
+
+
+  try {
+
+    const snapshot =
+      await getDoc(
+        doc(
+          db,
+          "settings",
+          "store"
+        )
+      );
+
+
+    if (!snapshot.exists()) {
+
+      console.log(
+        "尚未建立店家資訊"
+      );
+
+      return;
+
+    }
+
+
+    const data =
+      snapshot.data();
+
+
+    /* 頂部店名 */
+
+    if (
+      $("headerStoreName") &&
+      data.storeName
+    ) {
+
+      $("headerStoreName")
+        .textContent =
+          "🥬 " +
+          data.storeName;
+
+    }
+
+
+    /* 首頁店名 */
+
+    if (
+      $("homeStoreName") &&
+      data.storeName
+    ) {
+
+      $("homeStoreName")
+        .textContent =
+          data.storeName;
+
+    }
+
+
+    /* 首頁介紹 */
+
+    if (
+      $("homeIntro") &&
+      data.homeIntro
+    ) {
+
+      $("homeIntro")
+        .textContent =
+          data.homeIntro;
+
+    }
+
+
+    /* 首頁公告 */
+
+    if (
+      $("homeAnnouncement")
+    ) {
+
+      $("homeAnnouncement")
+        .textContent =
+          data.announcement ||
+          "歡迎光臨";
+
+    }
+
+
+    /* 店家資訊－店名 */
+
+    if (
+      $("infoStoreName")
+    ) {
+
+      $("infoStoreName")
+        .textContent =
+          data.storeName ||
+          "英姐蔬果商行";
+
+    }
+
+
+    /* 地址 */
+
+    if (
+      $("infoAddress")
+    ) {
+
+      $("infoAddress")
+        .textContent =
+          data.address ||
+          "尚未設定";
+
+    }
+
+
+    /* 電話 */
+
+    if (
+      $("infoPhone")
+    ) {
+
+      $("infoPhone")
+        .textContent =
+          data.phone ||
+          "尚未設定";
+
+    }
+
+
+    /* 營業時間 */
+
+    if (
+      $("infoHours")
+    ) {
+
+      $("infoHours")
+        .textContent =
+          data.hours ||
+          "尚未設定";
+
+    }
+
+
+    /* 店家說明 */
+
+    if (
+      $("infoDescription")
+    ) {
+
+      $("infoDescription")
+        .textContent =
+          data.description ||
+          "每日提供新鮮蔬果，歡迎選購。";
+
+    }
+
+
+    /* 網頁標題 */
+
+    if (data.storeName) {
+
+      document.title =
+        data.storeName +
+        "｜每日蔬菜訂購";
+
+    }
+
+
+    console.log(
+      "店家資訊讀取成功",
+      data
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "店家資訊讀取失敗：",
+      error
+    );
+
+  }
+
+}
+
+
+/* =========================
    LINE 會員
 ========================= */
 
 async function initMember() {
-
-  /*
-    LINE 登入成功後，
-    Worker 會把 Token 放在
-    #member_token=...
-  */
 
   const hash =
     window.location.hash;
@@ -230,11 +462,6 @@ async function initMember() {
 
     }
 
-
-    /*
-      Token 存好後清除網址，
-      避免 Token 一直留在網址列。
-    */
 
     history.replaceState(
       null,
@@ -267,12 +494,17 @@ async function initMember() {
       await fetch(
         `${WORKER_URL}/verify`,
         {
-          method: "GET",
+
+          method:
+            "GET",
 
           headers: {
+
             Authorization:
               `Bearer ${token}`
+
           }
+
         }
       );
 
@@ -282,6 +514,7 @@ async function initMember() {
       localStorage.removeItem(
         "yj_member_token"
       );
+
 
       showLoggedOut();
 
@@ -302,6 +535,7 @@ async function initMember() {
       localStorage.removeItem(
         "yj_member_token"
       );
+
 
       showLoggedOut();
 
@@ -377,8 +611,9 @@ function showLoggedIn(data) {
 
   if ($("memberName")) {
 
-    $("memberName").textContent =
-      `${data.name}，您好`;
+    $("memberName")
+      .textContent =
+        `${data.name}，您好`;
 
   }
 
@@ -390,31 +625,33 @@ function showLoggedIn(data) {
       $("memberPicture").src =
         data.picture;
 
-      $("memberPicture").style.display =
-        "block";
+
+      $("memberPicture")
+        .style.display =
+          "block";
+
 
     } else {
 
-      $("memberPicture").style.display =
-        "none";
+      $("memberPicture")
+        .style.display =
+          "none";
 
     }
 
   }
 
 
-  /*
-    訂購姓名空白時，
-    自動帶入 LINE 名稱。
-  */
-
   if (
     $("name") &&
-    !$("name").value.trim()
+    !$("name")
+      .value
+      .trim()
   ) {
 
     $("name").value =
-      data.name || "";
+      data.name ||
+      "";
 
   }
 
@@ -452,7 +689,8 @@ async function loadProducts() {
 
   if (!db) {
 
-    products = demo;
+    products =
+      demo;
 
 
     setStatus(
@@ -481,12 +719,17 @@ async function loadProducts() {
     products =
       snapshot.docs
         .map(docItem => ({
-          id: docItem.id,
+
+          id:
+            docItem.id,
+
           ...docItem.data()
+
         }))
         .filter(
           product =>
-            product.active !== false
+            product.active !==
+            false
         )
         .sort(
           (a, b) =>
@@ -497,7 +740,8 @@ async function loadProducts() {
 
     if (!products.length) {
 
-      products = demo;
+      products =
+        demo;
 
     }
 
@@ -518,7 +762,8 @@ async function loadProducts() {
     );
 
 
-    products = demo;
+    products =
+      demo;
 
 
     setStatus(
@@ -537,8 +782,9 @@ function setStatus(text) {
 
   if ($("status")) {
 
-    $("status").textContent =
-      text;
+    $("status")
+      .textContent =
+        text;
 
   }
 
@@ -561,7 +807,9 @@ function renderProducts() {
       .map(product => {
 
         const qty =
-          cart[product.id]?.qty ||
+          cart[
+            product.id
+          ]?.qty ||
           0;
 
 
@@ -570,22 +818,33 @@ function renderProducts() {
           <article class="card">
 
             <div class="emoji">
+
               ${esc(
                 product.emoji ||
                 "🥬"
               )}
+
             </div>
 
+
             <h3>
-              ${esc(product.name)}
+
+              ${esc(
+                product.name
+              )}
+
             </h3>
 
+
             <small>
+
               ${esc(
                 product.unit ||
                 "份"
               )}
+
             </small>
+
 
             <div class="price">
 
@@ -594,14 +853,17 @@ function renderProducts() {
               )}
 
               <small>
+
                 /
                 ${esc(
                   product.unit ||
                   "份"
                 )}
+
               </small>
 
             </div>
+
 
             <div class="qty">
 
@@ -613,9 +875,11 @@ function renderProducts() {
                 −
               </button>
 
+
               <b>
                 ${qty}
               </b>
+
 
               <button
                 class="qty-plus"
@@ -704,22 +968,29 @@ function changeQty(
 
 
   const currentQty =
-    cart[id]?.qty || 0;
+    cart[id]?.qty ||
+    0;
 
 
   const qty =
     Math.max(
       0,
-      currentQty + change
+      currentQty +
+      change
     );
 
 
   if (qty > 0) {
 
     cart[id] = {
-      p: product,
+
+      p:
+        product,
+
       qty
+
     };
+
 
   } else {
 
@@ -752,39 +1023,43 @@ function renderCart() {
   const count =
     items.reduce(
       (sum, item) =>
-        sum + item.qty,
+        sum +
+        item.qty,
       0
     );
 
 
   if ($("count")) {
 
-    $("count").textContent =
-      count + " 項";
+    $("count")
+      .textContent =
+        count +
+        " 項";
 
   }
 
-
-  /*
-    底部購物車數量徽章
-  */
 
   if ($("navCartBadge")) {
 
     if (count > 0) {
 
-      $("navCartBadge").hidden =
-        false;
+      $("navCartBadge")
+        .hidden =
+          false;
 
-      $("navCartBadge").textContent =
-        count > 99
-          ? "99+"
-          : String(count);
+
+      $("navCartBadge")
+        .textContent =
+          count > 99
+            ? "99+"
+            : String(count);
+
 
     } else {
 
-      $("navCartBadge").hidden =
-        true;
+      $("navCartBadge")
+        .hidden =
+          true;
 
     }
 
@@ -796,6 +1071,7 @@ function renderCart() {
     if (!items.length) {
 
       $("cart").innerHTML = `
+
         <div class="empty-cart">
 
           <div class="empty-cart-icon">
@@ -815,6 +1091,7 @@ function renderCart() {
           </button>
 
         </div>
+
       `;
 
 
@@ -824,14 +1101,17 @@ function renderCart() {
 
       if (shoppingButton) {
 
-        shoppingButton.addEventListener(
-          "click",
-          () => {
+        shoppingButton
+          .addEventListener(
+            "click",
+            () => {
 
-            showPage("home");
+              showPage(
+                "home"
+              );
 
-          }
-        );
+            }
+          );
 
       }
 
@@ -849,20 +1129,26 @@ function renderCart() {
                 <div>
 
                   <b>
+
                     ${esc(
                       item.p.name
                     )}
+
                   </b>
 
                   <small>
+
                     ${money(
                       item.p.price
                     )}
+
                     /
+
                     ${esc(
                       item.p.unit ||
                       "份"
                     )}
+
                   </small>
 
                 </div>
@@ -892,9 +1178,11 @@ function renderCart() {
                   −
                 </button>
 
+
                 <b>
                   ${item.qty}
                 </b>
+
 
                 <button
                   class="cart-plus"
@@ -972,8 +1260,9 @@ function renderCart() {
 
   if ($("total")) {
 
-    $("total").textContent =
-      money(total);
+    $("total")
+      .textContent =
+        money(total);
 
   }
 
@@ -1019,18 +1308,26 @@ if ($("submit")) {
             "請先選擇商品"
           );
 
-          showPage("home");
+
+          showPage(
+            "home"
+          );
+
 
           return;
 
         }
 
 
-        if (!name || !phone) {
+        if (
+          !name ||
+          !phone
+        ) {
 
           alert(
             "請填寫姓名與電話"
           );
+
 
           return;
 
@@ -1060,23 +1357,25 @@ if ($("submit")) {
           note,
 
           items:
-            items.map(item => ({
+            items.map(
+              item => ({
 
-              name:
-                item.p.name,
+                name:
+                  item.p.name,
 
-              unit:
-                item.p.unit,
+                unit:
+                  item.p.unit,
 
-              price:
-                Number(
-                  item.p.price
-                ),
+                price:
+                  Number(
+                    item.p.price
+                  ),
 
-              qty:
-                item.qty
+                qty:
+                  item.qty
 
-            })),
+              })
+            ),
 
           total,
 
@@ -1084,7 +1383,15 @@ if ($("submit")) {
             "new",
 
           memberLoggedIn:
-            Boolean(member)
+            Boolean(member),
+
+          memberId:
+            member?.id ||
+            null,
+
+          memberName:
+            member?.name ||
+            null
 
         };
 
@@ -1093,13 +1400,15 @@ if ($("submit")) {
           true;
 
 
-        $("submit").textContent =
-          "訂單送出中...";
+        $("submit")
+          .textContent =
+            "訂單送出中...";
 
 
         try {
 
-          let orderId = "";
+          let orderId =
+            "";
 
 
           if (db) {
@@ -1111,10 +1420,12 @@ if ($("submit")) {
                   "orders"
                 ),
                 {
+
                   ...order,
 
                   createdAt:
                     serverTimestamp()
+
                 }
               );
 
@@ -1132,7 +1443,9 @@ if ($("submit")) {
 
             localStorage.setItem(
               "lastOrder",
-              JSON.stringify(order)
+              JSON.stringify(
+                order
+              )
             );
 
           }
@@ -1174,12 +1487,15 @@ if ($("submit")) {
               <br>
 
               <small>
+
                 訂單編號：
+
                 ${esc(
                   makeOrderNumber(
                     orderId
                   )
                 )}
+
               </small>
 
             </div>
@@ -1210,8 +1526,9 @@ if ($("submit")) {
             false;
 
 
-          $("submit").textContent =
-            "確認送出訂單";
+          $("submit")
+            .textContent =
+              "確認送出訂單";
 
         }
 
@@ -1222,7 +1539,7 @@ if ($("submit")) {
 
 
 /* =========================
-   顯示用訂單編號
+   訂單編號
 ========================= */
 
 function makeOrderNumber(id) {
@@ -1240,7 +1557,8 @@ function makeOrderNumber(id) {
 
   const month =
     String(
-      now.getMonth() + 1
+      now.getMonth() +
+      1
     ).padStart(
       2,
       "0"
@@ -1278,7 +1596,7 @@ function makeOrderNumber(id) {
 
 
 /* =========================
-   啟動網站
+   啟動
 ========================= */
 
 async function start() {
@@ -1291,8 +1609,23 @@ async function start() {
   );
 
 
+  /*
+    讀取店家資訊
+  */
+
+  await loadStoreSettings();
+
+
+  /*
+    LINE 會員
+  */
+
   await initMember();
 
+
+  /*
+    商品
+  */
 
   await loadProducts();
 
