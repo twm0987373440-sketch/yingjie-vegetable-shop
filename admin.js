@@ -500,6 +500,9 @@ const pendingOrders =
               : `<button onclick="setOrderStatus('${o.id}','completed')">
                    ✓ 完成訂單
                  </button>`
+            <button onclick="deleteOrder('${o.id}')">
+  🗑 刪除
+</button>
           }
 
         </div>
@@ -551,6 +554,41 @@ window.setOrderStatus = async (id, status) => {
     console.error(error);
 
     alert("訂單狀態更新失敗");
+
+  }
+
+};
+/* =========================
+   刪除訂單
+========================= */
+
+window.deleteOrder =
+async id => {
+
+  const ok =
+    confirm(
+      "確定要刪除這張訂單嗎？\n\n刪除後無法復原。"
+    );
+
+
+  if (!ok) return;
+
+
+  try {
+
+    await deleteDoc(
+      doc(db, "orders", id)
+    );
+
+    await loadO();
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert(
+      "訂單刪除失敗"
+    );
 
   }
 
