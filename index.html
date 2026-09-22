@@ -1,277 +1,650 @@
 <!doctype html>
-
 <html lang="zh-Hant">
 
 <head>
-
   <meta charset="UTF-8">
 
   <meta
     name="viewport"
-    content="width=device-width, initial-scale=1"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
   >
 
-  <title>
-    英姐蔬果商行｜每日蔬菜訂購
-  </title>
+  <title>英姐蔬果商行｜每日蔬菜訂購</title>
 
   <link
     rel="stylesheet"
-    href="style.css"
+    href="style.css?v=30"
   >
-
 </head>
 
 
 <body>
 
+  <!-- =========================
+       頂部
+  ========================== -->
 
-<header>
+  <header class="top-header">
 
-  <b>
-    🥬 英姐蔬果商行
-  </b>
+    <div class="top-header-inner">
 
-  <a href="admin.html">
-    後台
-  </a>
+      <div>
+        <div
+          id="headerStoreName"
+          class="store-name"
+        >
+          🥬 英姐蔬果商行
+        </div>
 
-</header>
-
-
-<main>
-
-
-  <!-- LINE 會員 -->
-
-  <section
-    class="panel"
-    id="memberPanel"
-  >
-
-    <div id="memberLoggedOut">
-
-      <h2>
-        👤 會員
-      </h2>
-
-      <p>
-        使用 LINE 登入，之後可使用會員功能。
-      </p>
+        <div class="store-subtitle">
+          新鮮蔬果・每日訂購
+        </div>
+      </div>
 
       <a
-        id="lineLoginBtn"
-        href="https://yingjie-line-login.twm0987373440.workers.dev/login"
-        style="
-          display:block;
-          text-align:center;
-          padding:14px;
-          background:#06c755;
-          color:white;
-          text-decoration:none;
-          border-radius:10px;
-          font-size:18px;
-          font-weight:bold;
-        "
+        class="admin-link"
+        href="admin.html"
       >
-        💬 使用 LINE 登入
+        後台
       </a>
 
     </div>
 
+  </header>
 
-    <div
-      id="memberLoggedIn"
+
+  <main class="app-main">
+
+
+    <!-- =========================
+         1. 首頁
+    ========================== -->
+
+    <section
+      id="page-home"
+      class="app-page active"
+    >
+
+      <section class="hero">
+
+        <div class="hero-icon">
+          🥬
+        </div>
+
+        <h1 id="homeStoreName">
+          英姐蔬果商行
+        </h1>
+
+        <p id="homeIntro">
+          每日新鮮蔬果，簡單選購、快速下單。
+        </p>
+
+      </section>
+
+
+      <!-- 店家公告 -->
+
+      <section class="panel announcement-panel">
+
+        <div class="section-title-row">
+
+          <h2>
+            📢 店家公告
+          </h2>
+
+        </div>
+
+        <div
+          id="homeAnnouncement"
+          class="announcement-text"
+        >
+          歡迎光臨英姐蔬果商行
+        </div>
+
+      </section>
+
+
+      <!-- 今日商品 -->
+
+      <section class="home-products">
+
+        <div class="section-title-row">
+
+          <div>
+
+            <h2>
+              🥬 今日蔬菜
+            </h2>
+
+            <p class="section-description">
+              選擇數量後加入購物車
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div
+          id="status"
+          class="notice"
+        >
+          商品載入中…
+        </div>
+
+
+        <section
+          id="products"
+          class="grid"
+        ></section>
+
+      </section>
+
+    </section>
+
+
+
+    <!-- =========================
+         2. 購物車
+    ========================== -->
+
+    <section
+      id="page-cart"
+      class="app-page"
       hidden
     >
 
-      <div
-        style="
-          display:flex;
-          align-items:center;
-          gap:12px;
-        "
-      >
+      <div class="page-heading">
 
-        <img
-          id="memberPicture"
-          alt="會員頭像"
-          style="
-            width:52px;
-            height:52px;
-            border-radius:50%;
-            object-fit:cover;
-            display:none;
-          "
-        >
+        <h1>
+          🛒 購物車
+        </h1>
 
-        <div>
-
-          <div>
-            LINE 會員
-          </div>
-
-          <b
-            id="memberName"
-            style="
-              font-size:20px;
-            "
-          >
-          </b>
-
-        </div>
+        <p>
+          確認商品與數量後即可送出訂單
+        </p>
 
       </div>
 
 
-      <button
-        id="memberLogout"
-        type="button"
-        style="
-          margin-top:12px;
-        "
+      <section class="panel">
+
+        <div class="section-title-row">
+
+          <h2>
+            訂購清單
+          </h2>
+
+          <span
+            id="count"
+            class="cart-count"
+          >
+            0 項
+          </span>
+
+        </div>
+
+
+        <div id="cart"></div>
+
+
+        <div class="total">
+
+          <span>
+            合計
+          </span>
+
+          <b id="total">
+            NT$0
+          </b>
+
+        </div>
+
+      </section>
+
+
+      <section class="panel order-form-panel">
+
+        <h2>
+          📝 訂購資料
+        </h2>
+
+
+        <label class="form-label">
+
+          <span>
+            姓名
+          </span>
+
+          <input
+            id="name"
+            type="text"
+            placeholder="請輸入姓名"
+            autocomplete="name"
+          >
+
+        </label>
+
+
+        <label class="form-label">
+
+          <span>
+            電話
+          </span>
+
+          <input
+            id="phone"
+            type="tel"
+            placeholder="請輸入電話"
+            autocomplete="tel"
+          >
+
+        </label>
+
+
+        <label class="form-label">
+
+          <span>
+            備註
+          </span>
+
+          <textarea
+            id="note"
+            rows="3"
+            placeholder="如有特殊需求可填寫"
+          ></textarea>
+
+        </label>
+
+
+        <button
+          id="submit"
+          class="primary-button"
+          type="button"
+        >
+          確認送出訂單
+        </button>
+
+
+        <div id="result"></div>
+
+      </section>
+
+    </section>
+
+
+
+    <!-- =========================
+         3. 會員中心
+    ========================== -->
+
+    <section
+      id="page-member"
+      class="app-page"
+      hidden
+    >
+
+      <div class="page-heading">
+
+        <h1>
+          👤 會員中心
+        </h1>
+
+        <p>
+          管理您的會員資料
+        </p>
+
+      </div>
+
+
+      <section
+        class="panel member-panel"
+        id="memberPanel"
       >
-        登出會員
-      </button>
-
-    </div>
-
-  </section>
 
 
-  <!-- 今日蔬菜 -->
+        <!-- 尚未登入 -->
 
-  <section class="hero">
+        <div id="memberLoggedOut">
 
-    <h1>
-      今日蔬菜
-    </h1>
+          <div class="member-big-icon">
+            👤
+          </div>
 
-    <p>
-      選擇數量後加入購物車，確認資料即可送出訂單。
-    </p>
+          <h2>
+            LINE 會員
+          </h2>
 
-  </section>
+          <p class="member-description">
+            使用 LINE 登入，讓訂購更加方便。
+          </p>
 
 
-  <div
-    id="status"
-    class="notice"
+          <a
+            id="lineLoginBtn"
+            class="line-login-button"
+            href="https://yingjie-line-login.twm0987373440.workers.dev/login"
+          >
+            💬 使用 LINE 登入
+          </a>
+
+        </div>
+
+
+
+        <!-- 已登入 -->
+
+        <div
+          id="memberLoggedIn"
+          hidden
+        >
+
+          <div class="member-profile">
+
+            <img
+              id="memberPicture"
+              class="member-picture"
+              alt="會員頭像"
+            >
+
+
+            <div class="member-profile-text">
+
+              <div class="member-small-title">
+                LINE 會員
+              </div>
+
+              <b id="memberName">
+                會員
+              </b>
+
+            </div>
+
+          </div>
+
+
+          <div class="member-menu">
+
+            <div class="member-menu-item">
+
+              <span>
+                🛒
+              </span>
+
+              <div>
+
+                <b>
+                  我的訂單
+                </b>
+
+                <small>
+                  訂單查詢功能即將開放
+                </small>
+
+              </div>
+
+            </div>
+
+          </div>
+
+
+          <button
+            id="memberLogout"
+            class="secondary-button"
+            type="button"
+          >
+            登出會員
+          </button>
+
+        </div>
+
+      </section>
+
+    </section>
+
+
+
+    <!-- =========================
+         4. 店家資訊
+    ========================== -->
+
+    <section
+      id="page-store"
+      class="app-page"
+      hidden
+    >
+
+      <div class="page-heading">
+
+        <h1>
+          🏪 店家資訊
+        </h1>
+
+        <p>
+          歡迎來店選購
+        </p>
+
+      </div>
+
+
+      <section class="panel store-info-panel">
+
+
+        <div class="store-info-item">
+
+          <div class="store-info-icon">
+            🥬
+          </div>
+
+          <div>
+
+            <small>
+              店家名稱
+            </small>
+
+            <div id="infoStoreName">
+              英姐蔬果商行
+            </div>
+
+          </div>
+
+        </div>
+
+
+
+        <div class="store-info-item">
+
+          <div class="store-info-icon">
+            📍
+          </div>
+
+          <div>
+
+            <small>
+              地址
+            </small>
+
+            <div id="infoAddress">
+              尚未設定
+            </div>
+
+          </div>
+
+        </div>
+
+
+
+        <div class="store-info-item">
+
+          <div class="store-info-icon">
+            ☎️
+          </div>
+
+          <div>
+
+            <small>
+              電話
+            </small>
+
+            <div id="infoPhone">
+              尚未設定
+            </div>
+
+          </div>
+
+        </div>
+
+
+
+        <div class="store-info-item">
+
+          <div class="store-info-icon">
+            🕐
+          </div>
+
+          <div>
+
+            <small>
+              營業時間
+            </small>
+
+            <div id="infoHours">
+              尚未設定
+            </div>
+
+          </div>
+
+        </div>
+
+
+
+        <div class="store-info-item">
+
+          <div class="store-info-icon">
+            📣
+          </div>
+
+          <div>
+
+            <small>
+              店家說明
+            </small>
+
+            <div id="infoDescription">
+              每日提供新鮮蔬果，歡迎選購。
+            </div>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </section>
+
+
+  </main>
+
+
+
+  <!-- =========================
+       手機底部固定選單
+  ========================== -->
+
+  <nav
+    class="bottom-nav"
+    aria-label="主要選單"
   >
-    商品載入中…
-  </div>
 
 
-  <section
-    id="products"
-    class="grid"
-  >
-  </section>
+    <button
+      class="bottom-nav-item active"
+      type="button"
+      data-page="home"
+    >
 
+      <span class="nav-icon">
+        🏠
+      </span>
 
-  <!-- 購物車 -->
+      <span>
+        首頁
+      </span>
 
-  <section class="panel">
-
-    <h2>
-
-      🛒 訂購清單
-
-      <small id="count">
-        0 項
-      </small>
-
-    </h2>
-
-
-    <div id="cart">
-    </div>
-
-
-    <div class="total">
-
-      合計
-
-      <b id="total">
-        NT$0
-      </b>
-
-    </div>
-
-  </section>
-
-
-  <!-- 訂購資料 -->
-
-  <section class="panel">
-
-    <h2>
-      訂購資料
-    </h2>
-
-
-    <label>
-
-      姓名
-
-      <input
-        id="name"
-        placeholder="請輸入姓名"
-      >
-
-    </label>
-
-
-    <label>
-
-      電話
-
-      <input
-        id="phone"
-        type="tel"
-        placeholder="請輸入電話"
-      >
-
-    </label>
-
-
-    <label>
-
-      備註
-
-      <textarea
-        id="note"
-        rows="3"
-        placeholder="如有特殊需求可填寫"
-      ></textarea>
-
-    </label>
-
-
-    <button id="submit">
-      送出訂單
     </button>
 
 
-    <div id="result">
-    </div>
 
-  </section>
+    <button
+      class="bottom-nav-item"
+      type="button"
+      data-page="cart"
+    >
+
+      <span class="nav-icon nav-cart-icon">
+        🛒
+
+        <span
+          id="navCartBadge"
+          class="nav-badge"
+          hidden
+        >
+          0
+        </span>
+
+      </span>
+
+      <span>
+        購物車
+      </span>
+
+    </button>
 
 
-</main>
+
+    <button
+      class="bottom-nav-item"
+      type="button"
+      data-page="member"
+    >
+
+      <span class="nav-icon">
+        👤
+      </span>
+
+      <span>
+        會員中心
+      </span>
+
+    </button>
 
 
-<footer>
-  © 英姐蔬果商行
-</footer>
+
+    <button
+      class="bottom-nav-item"
+      type="button"
+      data-page="store"
+    >
+
+      <span class="nav-icon">
+        🏪
+      </span>
+
+      <span>
+        店家資訊
+      </span>
+
+    </button>
 
 
-<script
-  type="module"
-  src="app.js?v=20"
-></script>
+  </nav>
 
+
+
+  <script
+    type="module"
+    src="app.js?v=30"
+  ></script>
 
 </body>
 
