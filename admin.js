@@ -1,4 +1,6 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 
 import {
   getFirestore,
@@ -19,7 +21,10 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
-import { firebaseConfig } from "./firebase-config.js";
+import {
+  firebaseConfig
+} from "./firebase-config.js";
+
 
 const ADMIN_UID = "r8lFDyFoDTUffnwN6waBm0cMlHl1";
 
@@ -33,13 +38,16 @@ const money = n =>
   "NT$" + Number(n || 0).toLocaleString("zh-TW");
 
 const esc = s =>
-  String(s ?? "").replace(/[&<>"']/g, c => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  }[c]));
+  String(s ?? "").replace(
+    /[&<>"']/g,
+    c => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    }[c])
+  );
 
 
 /* =========================
@@ -60,15 +68,20 @@ $("loginBtn").onclick = async () => {
 
   try {
 
-    const result = await signInWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
+    const result =
+      await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
 
     if (result.user.uid !== ADMIN_UID) {
+
       await signOut(auth);
-      $("msg").textContent = "此帳號沒有管理員權限";
+
+      $("msg").textContent =
+        "此帳號沒有管理員權限";
+
       return;
     }
 
@@ -77,8 +90,9 @@ $("loginBtn").onclick = async () => {
   } catch (error) {
 
     console.error(error);
-    $("msg").textContent = "登入失敗，請確認 Email 或密碼";
 
+    $("msg").textContent =
+      "登入失敗，請確認 Email 或密碼";
   }
 };
 
@@ -110,14 +124,12 @@ onAuthStateChanged(auth, async user => {
 
     $("login").hidden = false;
     $("panel").hidden = true;
-
   }
-
 });
 
 
 /* =========================
-   頁籤
+   商品 / 訂單頁籤
 ========================= */
 
 $("ot").onclick = () => {
@@ -133,14 +145,15 @@ $("pt").onclick = () => {
    新增商品
 ========================= */
 
-$("add").onclick = () => edit({
-  name: "新商品",
-  unit: "斤",
-  price: 0,
-  emoji: "🥬",
-  active: true,
-  sort: 999
-});
+$("add").onclick = () =>
+  edit({
+    name: "新商品",
+    unit: "斤",
+    price: 0,
+    emoji: "🥬",
+    active: true,
+    sort: 999
+  });
 
 
 /* =========================
@@ -152,7 +165,9 @@ async function loadP() {
   try {
 
     const snapshot =
-      await getDocs(collection(db, "products"));
+      await getDocs(
+        collection(db, "products")
+      );
 
     const products =
       snapshot.docs.map(d => ({
@@ -166,21 +181,37 @@ async function loadP() {
         <div class="row">
 
           <span>
+
             ${esc(p.emoji || "🥬")}
+
             <b>${esc(p.name)}</b>
+
             ｜${esc(p.unit)}
+
             ｜${money(p.price)}
-            ｜${p.active === false ? "下架" : "上架"}
+
+            ｜${
+              p.active === false
+                ? "下架"
+                : "上架"
+            }
+
           </span>
 
           <span>
-            <button onclick='edit(${JSON.stringify(p)})'>
+
+            <button
+              onclick='edit(${JSON.stringify(p)})'
+            >
               編輯
             </button>
 
-            <button onclick="delP('${p.id}')">
+            <button
+              onclick="delP('${p.id}')"
+            >
               刪除
             </button>
+
           </span>
 
         </div>
@@ -190,11 +221,10 @@ async function loadP() {
   } catch (error) {
 
     console.error(error);
+
     $("products").innerHTML =
       '<div class="notice">商品讀取失敗</div>';
-
   }
-
 }
 
 
@@ -204,24 +234,38 @@ async function loadP() {
 
 window.edit = async p => {
 
-  const name = prompt("商品名稱", p.name);
+  const name =
+    prompt("商品名稱", p.name);
+
   if (name === null) return;
 
-  const unit = prompt("單位", p.unit);
+
+  const unit =
+    prompt("單位", p.unit);
+
   if (unit === null) return;
 
-  const price = prompt("單價", p.price);
+
+  const price =
+    prompt("單價", p.price);
+
   if (price === null) return;
 
-  const emoji = prompt(
-    "Emoji",
-    p.emoji || "🥬"
-  );
+
+  const emoji =
+    prompt(
+      "Emoji",
+      p.emoji || "🥬"
+    );
 
   if (emoji === null) return;
 
+
   const active =
-    confirm("按「確定」＝上架\n按「取消」＝下架");
+    confirm(
+      "按「確定」＝上架\n按「取消」＝下架"
+    );
+
 
   const data = {
     name,
@@ -232,22 +276,29 @@ window.edit = async p => {
     sort: p.sort ?? 999
   };
 
+
   try {
 
     if (p.id) {
 
       await updateDoc(
-        doc(db, "products", p.id),
+        doc(
+          db,
+          "products",
+          p.id
+        ),
         data
       );
 
     } else {
 
       await addDoc(
-        collection(db, "products"),
+        collection(
+          db,
+          "products"
+        ),
         data
       );
-
     }
 
     await loadP();
@@ -255,10 +306,9 @@ window.edit = async p => {
   } catch (error) {
 
     console.error(error);
+
     alert("商品儲存失敗");
-
   }
-
 };
 
 
@@ -268,14 +318,20 @@ window.edit = async p => {
 
 window.delP = async id => {
 
-  if (!confirm("確定刪除這個商品？")) {
+  if (
+    !confirm("確定刪除這個商品？")
+  ) {
     return;
   }
 
   try {
 
     await deleteDoc(
-      doc(db, "products", id)
+      doc(
+        db,
+        "products",
+        id
+      )
     );
 
     await loadP();
@@ -283,10 +339,9 @@ window.delP = async id => {
   } catch (error) {
 
     console.error(error);
+
     alert("商品刪除失敗");
-
   }
-
 };
 
 
@@ -298,74 +353,126 @@ async function loadO() {
 
   try {
 
-    const snapshot = await getDocs(
-      query(
-        collection(db, "orders"),
-        orderBy("createdAt", "desc")
-      )
-    );
+    const snapshot =
+      await getDocs(
+        query(
+          collection(
+            db,
+            "orders"
+          ),
+          orderBy(
+            "createdAt",
+            "desc"
+          )
+        )
+      );
 
-    const orders = snapshot.docs.map(d => ({
-      id: d.id,
-      ...d.data()
-    }));
 
-const pendingOrders =
-  orders.filter(
-    o => o.status !== "completed"
-  );
-    // ===== 今日日期 =====
+    const orders =
+      snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+
+
+    /* =====================
+       待處理訂單
+    ===================== */
+
+    const pendingOrders =
+      orders.filter(
+        o => o.status !== "completed"
+      );
+
+
+    /* =====================
+       今日訂單
+    ===================== */
 
     const now = new Date();
 
-    const todayOrders = orders.filter(o => {
+    const todayOrders =
+      orders.filter(o => {
 
-      if (!o.createdAt || !o.createdAt.toDate) {
-        return false;
-      }
+        if (
+          !o.createdAt ||
+          !o.createdAt.toDate
+        ) {
+          return false;
+        }
 
-      const d = o.createdAt.toDate();
+        const date =
+          o.createdAt.toDate();
 
-      return (
-        d.getFullYear() === now.getFullYear() &&
-        d.getMonth() === now.getMonth() &&
-        d.getDate() === now.getDate()
+        return (
+          date.getFullYear() ===
+            now.getFullYear() &&
+
+          date.getMonth() ===
+            now.getMonth() &&
+
+          date.getDate() ===
+            now.getDate()
+        );
+      });
+
+
+    /* =====================
+       今日營業額
+    ===================== */
+
+    const todayTotal =
+      todayOrders.reduce(
+        (sum, order) =>
+          sum +
+          Number(order.total || 0),
+        0
       );
 
-    });
 
-
-    // ===== 今日營業額 =====
-
-    const todayTotal = todayOrders.reduce(
-      (sum, o) => sum + Number(o.total || 0),
-      0
-    );
-
-
-    // ===== 今日統計 =====
+    /* =====================
+       今日統計
+    ===================== */
 
     const summary = `
 
-      <div class="panel" style="margin-bottom:16px">
+      <div
+        class="panel"
+        style="margin-bottom:16px"
+      >
 
-        <h3>📊 今日訂單統計</h3>
+        <h3>
+          📊 今日訂單統計
+        </h3>
 
-        <div style="
-          display:flex;
-          gap:20px;
-          flex-wrap:wrap;
-          font-size:18px;
-        ">
+        <div
+          style="
+            display:flex;
+            gap:20px;
+            flex-wrap:wrap;
+            font-size:18px;
+          "
+        >
 
           <div>
             今日訂單：
-            <b>${todayOrders.length} 筆</b>
+            <b>
+              ${todayOrders.length} 筆
+            </b>
           </div>
 
           <div>
             今日營業額：
-            <b>${money(todayTotal)}</b>
+            <b>
+              ${money(todayTotal)}
+            </b>
+          </div>
+
+          <div>
+            待處理訂單：
+            <b>
+              ${pendingOrders.length} 筆
+            </b>
           </div>
 
         </div>
@@ -373,143 +480,202 @@ const pendingOrders =
       </div>
 
     `;
-<div>
-  待處理訂單：
-  <b>${pendingOrders.length} 筆</b>
-</div>
-
-    // ===== 訂單內容 =====
-
-    const orderHTML = orders.map(o => {
-
-      let timeText = "時間未記錄";
-
-      if (o.createdAt && o.createdAt.toDate) {
-
-        timeText =
-          o.createdAt.toDate().toLocaleString(
-            "zh-TW",
-            {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit"
-            }
-          );
-
-      }
 
 
-      const completed = o.status === "completed";
+    /* =====================
+       訂單列表
+    ===================== */
+
+    const orderHTML =
+      orders.map(o => {
+
+        let timeText =
+          "時間未記錄";
+
+        if (
+          o.createdAt &&
+          o.createdAt.toDate
+        ) {
+
+          timeText =
+            o.createdAt
+              .toDate()
+              .toLocaleString(
+                "zh-TW",
+                {
+                  year: "numeric",
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit"
+                }
+              );
+        }
 
 
-      return `
+        const completed =
+          o.status === "completed";
 
-        <div class="order"
-             style="
-               margin-bottom:15px;
-               padding:15px;
-               border:1px solid #ddd;
-               border-radius:10px;
-             ">
 
-          <div style="margin-bottom:8px">
+        return `
 
-            <b style="font-size:18px">
+          <div
+            class="order"
+            style="
+              margin-bottom:15px;
+              padding:15px;
+              border:1px solid #ddd;
+              border-radius:10px;
+            "
+          >
+
+            <div
+              style="
+                margin-bottom:8px;
+              "
+            >
+
+              <b
+                style="
+                  font-size:18px;
+                "
+              >
+
+                ${
+                  completed
+                    ? "🟢 已完成"
+                    : "🟠 新訂單"
+                }
+
+              </b>
+
+            </div>
+
+
+            <div>
+              🕐 ${esc(timeText)}
+            </div>
+
+
+            <br>
+
+
+            <div>
+
+              👤
+
+              <b>
+                ${esc(
+                  o.customerName || ""
+                )}
+              </b>
+
+              ｜
+
+              📞
+              ${esc(
+                o.customerPhone || ""
+              )}
+
+            </div>
+
+
+            <br>
+
+
+            <div>
+
+              🥬
 
               ${
-                completed
-                  ? "🟢 已完成"
-                  : "🟠 新訂單"
+                (o.items || [])
+                  .map(i =>
+                    `${esc(i.name)} × ${Number(i.qty || 0)}`
+                  )
+                  .join("、")
               }
 
-            </b>
-
-          </div>
+            </div>
 
 
-          <div>
-            🕐 ${esc(timeText)}
-          </div>
-
-          <br>
+            <br>
 
 
-          <div>
+            <div>
 
-            👤 <b>${esc(o.customerName || "")}</b>
+              💰 金額：
 
-            ｜
+              <b>
+                ${money(o.total)}
+              </b>
 
-            📞 ${esc(o.customerPhone || "")}
-
-          </div>
-
-
-          <br>
+            </div>
 
 
-          <div>
+            <div>
 
-            🥬 ${
-              (o.items || []).map(i =>
-                `${esc(i.name)} × ${Number(i.qty || 0)}`
-              ).join("、")
+              📝 備註：
+
+              ${esc(
+                o.note || "無"
+              )}
+
+            </div>
+
+
+            <br>
+
+
+            ${
+              completed
+
+                ? `
+
+                  <button
+                    onclick="
+                      setOrderStatus(
+                        '${o.id}',
+                        'new'
+                      )
+                    "
+                  >
+                    ↩️ 恢復新訂單
+                  </button>
+
+                `
+
+                : `
+
+                  <button
+                    onclick="
+                      setOrderStatus(
+                        '${o.id}',
+                        'completed'
+                      )
+                    "
+                  >
+                    ✓ 完成訂單
+                  </button>
+
+                `
             }
 
-          </div>
-<div>
-  ${
-      : "🏪 自取"
-  }
-  ｜
-  希望時間：
-  ${esc(
-    o.pickupTime
-      ? new Date(o.pickupTime).toLocaleString("zh-TW")
-      : "未填寫"
-  )}
-</div>
 
-          <br>
+            <button
+              onclick="
+                deleteOrder(
+                  '${o.id}'
+                )
+              "
+            >
+              🗑 刪除
+            </button>
 
-
-          <div>
-            💰 金額：
-            <b>${money(o.total)}</b>
           </div>
 
+        `;
 
-          <div>
-            📝 備註：
-            ${esc(o.note || "無")}
-          </div>
-
-
-          <br>
-
-
-          ${
-            completed
-
-              ? `<button onclick="setOrderStatus('${o.id}','new')">
-                   ↩️ 恢復新訂單
-                 </button>`
-
-              : `<button onclick="setOrderStatus('${o.id}','completed')">
-                   ✓ 完成訂單
-                 </button>`
-            <button onclick="deleteOrder('${o.id}')">
-  🗑 刪除
-</button>
-          }
-
-        </div>
-
-      `;
-
-    }).join("");
+      }).join("");
 
 
     $("orders").innerHTML =
@@ -526,24 +692,27 @@ const pendingOrders =
 
     $("orders").innerHTML =
       '<div class="notice">訂單讀取失敗</div>';
-
   }
-
 }
 
 
 /* =========================
-   訂單狀態
+   完成 / 恢復訂單
 ========================= */
 
-window.setOrderStatus = async (id, status) => {
+window.setOrderStatus =
+async (id, status) => {
 
   try {
 
     await updateDoc(
-      doc(db, "orders", id),
+      doc(
+        db,
+        "orders",
+        id
+      ),
       {
-        status: status
+        status
       }
     );
 
@@ -553,11 +722,13 @@ window.setOrderStatus = async (id, status) => {
 
     console.error(error);
 
-    alert("訂單狀態更新失敗");
-
+    alert(
+      "訂單狀態更新失敗"
+    );
   }
-
 };
+
+
 /* =========================
    刪除訂單
 ========================= */
@@ -570,14 +741,17 @@ async id => {
       "確定要刪除這張訂單嗎？\n\n刪除後無法復原。"
     );
 
-
   if (!ok) return;
 
 
   try {
 
     await deleteDoc(
-      doc(db, "orders", id)
+      doc(
+        db,
+        "orders",
+        id
+      )
     );
 
     await loadO();
@@ -589,7 +763,5 @@ async id => {
     alert(
       "訂單刪除失敗"
     );
-
   }
-
 };
