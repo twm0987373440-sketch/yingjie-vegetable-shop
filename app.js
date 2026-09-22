@@ -2,6 +2,7 @@ import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 
+
 import {
   getFirestore,
   collection,
@@ -10,62 +11,367 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
+
 import {
   firebaseConfig
 } from "./firebase-config.js";
 
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const WORKER_URL =
+  "https://yingjie-line-login.twm0987373440.workers.dev";
+
+
+const demo = [
+
+  ["高麗菜", "斤", 35, "🥬"],
+  ["青江菜", "把", 30, "🥬"],
+  ["空心菜", "把", 25, "🌿"],
+  ["小白菜", "把", 25, "🥬"],
+  ["菠菜", "把", 35, "🌿"],
+  ["青椒", "斤", 55, "🫑"],
+  ["洋蔥", "斤", 30, "🧅"],
+  ["紅蘿蔔", "斤", 35, "🥕"],
+  ["馬鈴薯", "斤", 40, "🥔"],
+  ["白蘿蔔", "條", 30, "🥕"]
+
+].map(
+  (item, index) => ({
+    id: "d" + index,
+    name: item[0],
+    unit: item[1],
+    price: item[2],
+    emoji: item[3],
+    active: true,
+    sort: index
+  })
+);
+
+
+const configured =
+  firebaseConfig.apiKey &&
+  !firebaseConfig.apiKey.startsWith(
+    "YOUR_"
+  );
+
+
+const db =
+  configured
+    ? getFirestore(
+        initializeApp(
+          firebaseConfig
+        )
+      )
+    : null;
+
 
 let products = [];
 
+
 let cart =
   JSON.parse(
-    localStorage.getItem("yjcart") || "{}"
+    localStorage.getItem(
+      "yjcart"
+    ) || "{}"
   );
 
-const $ = id =>
-  document.getElementById(id);
 
-const money = n =>
-  "NT$" +
-  Number(n || 0).toLocaleString("zh-TW");
+let member = null;
 
-const esc = s =>
-  String(s ?? "").replace(
-    /[&<>"']/g,
-    c => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    }[c])
+
+const $ =
+  id =>
+    document.getElementById(id);
+
+
+const money =
+  n =>
+    "NT$" +
+    Number(n || 0)
+      .toLocaleString(
+        "zh-TW"
+      );
+
+
+const esc =
+  s =>
+    String(s ?? "")
+      .replace(
+        /[&<>"']/g,
+        c => ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#39;"
+        }[c])
+      );
+
+
+/* =========================
+   LINE 會員
+========================= */
+
+async function initMember() {
+
+  /*
+    LINE 登入成功後 Worker 會把 Token
+    放在網址 #member_token=...
+  */
+
+  const hash =
+    window.location.hash;
+
+
+  if (
+    hash.startsWith(
+      "#member_token="
+    )
+  ) {
+
+    const token =
+      decodeURIComponent(
+        hash.substring(
+          "#member_token=".length
+        )
+      );
+
+
+    if (token) {
+
+      localStorage.setItem(
+        "yj_member_token",
+        token
+      );
+
+    }
+
+
+    /*
+      清掉網址上的 token，
+      避免一直留在網址列。
+    */
+
+    history.replaceState(
+      null,
+      "",
+      window.location.pathname +
+      window.location.search
+    );
+
+  }
+
+
+  const token =
+    localStorage.getItem(
+      "yj_member_token"
+    );
+
+
+  if (!token) {
+
+    showLoggedOut();
+
+    return;
+
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        `${WORKER_URL}/verify`,
+        {
+          method: "GET",
+
+          headers: {
+            Authorization:
+              `Bearer ${token}`
+          }
+        }
+      );
+
+
+    if (!response.ok) {
+
+      localStorage.removeItem(
+        "yj_member_token"
+      );
+
+      showLoggedOut();
+
+      return;
+
+    }
+
+
+    const data =
+      await response.json();
+
+
+    if (
+      !data.ok ||
+      !data.member
+    ) {
+
+      localStorage.removeItem(
+        "yj_member_token"
+      );
+
+      showLoggedOut();
+
+      return;
+
+    }
+
+
+    member =
+      data.member;
+
+
+    showLoggedIn(
+      member
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "會員驗證失敗：",
+      error
+    );
+
+
+    showLoggedOut();
+
+  }
+
+}
+
+
+function showLoggedOut() {
+
+  member = null;
+
+
+  $("memberLoggedOut").hidden =
+    false;
+
+
+  $("memberLoggedIn").hidden =
+    true;
+
+}
+
+
+function showLoggedIn(data) {
+
+  $("memberLoggedOut").hidden =
+    true;
+
+
+  $("memberLoggedIn").hidden =
+    false;
+
+
+  $("memberName").textContent =
+    `${data.name}，您好`;
+
+
+  if (data.picture) {
+
+    $("memberPicture").src =
+      data.picture;
+
+
+    $("memberPicture").style.display =
+      "block";
+
+  } else {
+
+    $("memberPicture").style.display =
+      "none";
+
+  }
+
+
+  /*
+    姓名空白時，自動帶入 LINE 名稱。
+    使用者仍然可以自行修改。
+  */
+
+  if (
+    !$("name").value.trim()
+  ) {
+
+    $("name").value =
+      data.name || "";
+
+  }
+
+}
+
+
+$("memberLogout")
+  .addEventListener(
+    "click",
+    () => {
+
+      localStorage.removeItem(
+        "yj_member_token"
+      );
+
+
+      member = null;
+
+
+      showLoggedOut();
+
+    }
   );
 
 
 /* =========================
-   載入商品
+   商品
 ========================= */
 
-async function load() {
+async function loadProducts() {
+
+  if (!db) {
+
+    products = demo;
+
+    setStatus(
+      "目前為示範模式"
+    );
+
+    renderProducts();
+
+    return;
+
+  }
+
 
   try {
 
     const snapshot =
       await getDocs(
-        collection(db, "products")
+        collection(
+          db,
+          "products"
+        )
       );
+
 
     products =
       snapshot.docs
-        .map(d => ({
-          id: d.id,
-          ...d.data()
+        .map(docItem => ({
+          id: docItem.id,
+          ...docItem.data()
         }))
-        .filter(p =>
-          p.active !== false
+        .filter(
+          product =>
+            product.active !== false
         )
         .sort(
           (a, b) =>
@@ -73,29 +379,50 @@ async function load() {
             (b.sort ?? 999)
         );
 
+
     if (!products.length) {
-      status("目前沒有上架商品");
-    } else {
-      status("商品已更新");
+
+      products = demo;
+
     }
 
-    render();
+
+    setStatus(
+      "商品已更新"
+    );
+
+
+    renderProducts();
+
 
   } catch (error) {
 
-    console.error(error);
-
-    status(
-      "商品讀取失敗，請稍後再試。"
+    console.error(
+      "商品讀取失敗：",
+      error
     );
+
+
+    products = demo;
+
+
+    setStatus(
+      "Firebase 讀取失敗，暫時顯示示範商品。"
+    );
+
+
+    renderProducts();
 
   }
 
 }
 
 
-function status(text) {
-  $("status").textContent = text;
+function setStatus(text) {
+
+  $("status").textContent =
+    text;
+
 }
 
 
@@ -103,52 +430,128 @@ function status(text) {
    商品畫面
 ========================= */
 
-function render() {
+function renderProducts() {
 
   $("products").innerHTML =
-    products.map(p => `
+    products
+      .map(product => {
 
-      <article class="card">
+        const qty =
+          cart[product.id]?.qty ||
+          0;
 
-        <div class="emoji">
-          ${p.emoji || "🥬"}
-        </div>
 
-        <h3>${esc(p.name)}</h3>
+        return `
 
-        <small>
-          ${esc(p.unit || "份")}
-        </small>
+          <article class="card">
 
-        <div class="price">
+            <div class="emoji">
+              ${esc(
+                product.emoji ||
+                "🥬"
+              )}
+            </div>
 
-          ${money(p.price)}
+            <h3>
+              ${esc(product.name)}
+            </h3>
 
-          <small>
-            / ${esc(p.unit || "份")}
-          </small>
+            <small>
+              ${esc(
+                product.unit ||
+                "份"
+              )}
+            </small>
 
-        </div>
+            <div class="price">
 
-        <div class="qty">
+              ${money(
+                product.price
+              )}
 
-          <button onclick="chg('${p.id}', -1)">
-            −
-          </button>
+              <small>
+                /
+                ${esc(
+                  product.unit ||
+                  "份"
+                )}
+              </small>
 
-          <b>
-            ${cart[p.id]?.qty || 0}
-          </b>
+            </div>
 
-          <button onclick="chg('${p.id}', 1)">
-            ＋
-          </button>
+            <div class="qty">
 
-        </div>
+              <button
+                class="qty-minus"
+                data-id="${product.id}"
+                type="button"
+              >
+                −
+              </button>
 
-      </article>
+              <b>
+                ${qty}
+              </b>
 
-    `).join("");
+              <button
+                class="qty-plus"
+                data-id="${product.id}"
+                type="button"
+              >
+                ＋
+              </button>
+
+            </div>
+
+          </article>
+
+        `;
+
+      })
+      .join("");
+
+
+  document
+    .querySelectorAll(
+      ".qty-minus"
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          changeQty(
+            button.dataset.id,
+            -1
+          );
+
+        }
+      );
+
+    });
+
+
+  document
+    .querySelectorAll(
+      ".qty-plus"
+    )
+    .forEach(button => {
+
+      button.addEventListener(
+        "click",
+        () => {
+
+          changeQty(
+            button.dataset.id,
+            1
+          );
+
+        }
+      );
+
+    });
+
 
   renderCart();
 
@@ -156,26 +559,38 @@ function render() {
 
 
 /* =========================
-   修改數量
+   數量
 ========================= */
 
-window.chg = (id, change) => {
+function changeQty(
+  id,
+  change
+) {
 
   const product =
     products.find(
-      p => p.id === id
+      item =>
+        item.id === id
     );
 
-  if (!product) return;
+
+  if (!product) {
+    return;
+  }
+
+
+  const currentQty =
+    cart[id]?.qty || 0;
+
 
   const qty =
     Math.max(
       0,
-      (cart[id]?.qty || 0) +
-      change
+      currentQty + change
     );
 
-  if (qty) {
+
+  if (qty > 0) {
 
     cart[id] = {
       p: product,
@@ -188,14 +603,16 @@ window.chg = (id, change) => {
 
   }
 
+
   localStorage.setItem(
     "yjcart",
     JSON.stringify(cart)
   );
 
-  render();
 
-};
+  renderProducts();
+
+}
 
 
 /* =========================
@@ -207,47 +624,73 @@ function renderCart() {
   const items =
     Object.values(cart);
 
-  $("count").textContent =
+
+  const count =
     items.reduce(
       (sum, item) =>
         sum + item.qty,
       0
-    ) + " 項";
+    );
 
-  $("cart").innerHTML =
-    items.length
 
-      ? items.map(item => `
+  $("count").textContent =
+    count + " 項";
+
+
+  if (!items.length) {
+
+    $("cart").innerHTML =
+      "<p>尚未選擇商品</p>";
+
+  } else {
+
+    $("cart").innerHTML =
+      items
+        .map(item => `
 
           <div class="row">
 
             <span>
-              ${esc(item.p.name)}
+
+              ${esc(
+                item.p.name
+              )}
+
               ×
               ${item.qty}
+
             </span>
 
             <b>
+
               ${money(
-                item.p.price *
+                Number(
+                  item.p.price
+                ) *
                 item.qty
               )}
+
             </b>
 
           </div>
 
-        `).join("")
+        `)
+        .join("");
 
-      : "<p>尚未選擇商品</p>";
+  }
+
 
   const total =
     items.reduce(
       (sum, item) =>
         sum +
-        Number(item.p.price) *
+        Number(
+          item.p.price
+        ) *
         item.qty,
       0
     );
+
 
   $("total").textContent =
     money(total);
@@ -259,177 +702,302 @@ function renderCart() {
    送出訂單
 ========================= */
 
-$("submit").onclick =
-async () => {
+$("submit")
+  .addEventListener(
+    "click",
+    async () => {
 
-  const items =
-    Object.values(cart);
-
-  const name =
-    $("name").value.trim();
-
-  const phone =
-    $("phone").value.trim();
-
-  const note =
-    $("note").value.trim();
+      const items =
+        Object.values(cart);
 
 
-  if (!items.length) {
-
-    alert("請先選擇商品");
-
-    return;
-
-  }
+      const name =
+        $("name")
+          .value
+          .trim();
 
 
-  if (!name || !phone) {
-
-    alert("請填寫姓名與電話");
-
-    return;
-
-  }
+      const phone =
+        $("phone")
+          .value
+          .trim();
 
 
-  const total =
-    items.reduce(
-      (sum, item) =>
-        sum +
-        Number(item.p.price) *
-        item.qty,
-      0
+      const note =
+        $("note")
+          .value
+          .trim();
+
+
+      if (!items.length) {
+
+        alert(
+          "請先選擇商品"
+        );
+
+        return;
+
+      }
+
+
+      if (!name || !phone) {
+
+        alert(
+          "請填寫姓名與電話"
+        );
+
+        return;
+
+      }
+
+
+      const total =
+        items.reduce(
+          (sum, item) =>
+            sum +
+            Number(
+              item.p.price
+            ) *
+            item.qty,
+          0
+        );
+
+
+      const order = {
+
+        customerName:
+          name,
+
+        customerPhone:
+          phone,
+
+        note,
+
+        items:
+          items.map(item => ({
+
+            name:
+              item.p.name,
+
+            unit:
+              item.p.unit,
+
+            price:
+              Number(
+                item.p.price
+              ),
+
+            qty:
+              item.qty
+
+          })),
+
+        total,
+
+        status:
+          "new",
+
+        /*
+          目前只記錄是否透過會員登入。
+          下一階段再安全綁定會員訂單查詢。
+        */
+
+        memberLoggedIn:
+          Boolean(member)
+
+      };
+
+
+      $("submit").disabled =
+        true;
+
+
+      $("submit").textContent =
+        "訂單送出中...";
+
+
+      try {
+
+        let orderId = "";
+
+
+        if (db) {
+
+          const result =
+            await addDoc(
+              collection(
+                db,
+                "orders"
+              ),
+              {
+                ...order,
+
+                createdAt:
+                  serverTimestamp()
+              }
+            );
+
+
+          orderId =
+            result.id;
+
+        } else {
+
+          orderId =
+            "DEMO-" +
+            Date.now();
+
+
+          localStorage.setItem(
+            "lastOrder",
+            JSON.stringify(
+              order
+            )
+          );
+
+        }
+
+
+        cart = {};
+
+
+        localStorage.removeItem(
+          "yjcart"
+        );
+
+
+        renderProducts();
+
+
+        $("result").innerHTML = `
+
+          <div class="ok">
+
+            <b>
+              訂單已送出！
+            </b>
+
+            <br>
+
+            金額：
+            ${money(total)}
+
+            <br>
+
+            <small>
+              訂單編號：
+              ${esc(
+                makeOrderNumber(
+                  orderId
+                )
+              )}
+            </small>
+
+          </div>
+
+        `;
+
+
+        $("note").value =
+          "";
+
+
+      } catch (error) {
+
+        console.error(
+          "訂單送出失敗：",
+          error
+        );
+
+
+        alert(
+          "訂單送出失敗，請稍後再試"
+        );
+
+      } finally {
+
+        $("submit").disabled =
+          false;
+
+
+        $("submit").textContent =
+          "送出訂單";
+
+      }
+
+    }
+  );
+
+
+/* =========================
+   顯示用訂單編號
+========================= */
+
+function makeOrderNumber(
+  id
+) {
+
+  const now =
+    new Date();
+
+
+  const year =
+    now
+      .getFullYear()
+      .toString()
+      .slice(-2);
+
+
+  const month =
+    String(
+      now.getMonth() + 1
+    ).padStart(
+      2,
+      "0"
     );
 
 
-  const order = {
-
-    customerName: name,
-
-    customerPhone: phone,
-
-    note,
-
-    items:
-      items.map(item => ({
-
-        name:
-          item.p.name,
-
-        unit:
-          item.p.unit,
-
-        price:
-          Number(item.p.price),
-
-        qty:
-          item.qty
-
-      })),
-
-    total,
-
-    status: "new",
-
-    createdAt:
-      serverTimestamp()
-
-  };
-
-
-  try {
-
-    $("submit").disabled = true;
-
-    $("submit").textContent =
-      "送出中…";
-
-
-    const ref =
-      await addDoc(
-        collection(db, "orders"),
-        order
-      );
-
-
-    const now =
-      new Date();
-
-    const date =
-      [
-        now.getFullYear(),
-        String(
-          now.getMonth() + 1
-        ).padStart(2, "0"),
-        String(
-          now.getDate()
-        ).padStart(2, "0")
-      ].join("");
-
-
-    const orderNumber =
-      date +
-      "-" +
-      ref.id
-        .slice(0, 6)
-        .toUpperCase();
-
-
-    cart = {};
-
-    localStorage.removeItem(
-      "yjcart"
-    );
-
-    renderCart();
-
-
-    $("name").value = "";
-    $("phone").value = "";
-    $("note").value = "";
-
-
-    $("result").innerHTML = `
-
-      <div class="ok">
-
-        <b>✅ 訂單已送出！</b>
-
-        <br>
-
-        訂單編號：
-        ${esc(orderNumber)}
-
-        <br>
-
-        金額：
-        ${money(total)}
-
-      </div>
-
-    `;
-
-
-  } catch (error) {
-
-    console.error(error);
-
-    alert(
-      "送出失敗，請稍後再試"
+  const day =
+    String(
+      now.getDate()
+    ).padStart(
+      2,
+      "0"
     );
 
 
-  } finally {
+  const shortId =
+    String(id || "")
+      .replace(
+        /[^a-zA-Z0-9]/g,
+        ""
+      )
+      .slice(
+        0,
+        6
+      )
+      .toUpperCase();
 
-    $("submit").disabled = false;
 
-    $("submit").textContent =
-      "送出訂單";
+  return (
+    `${year}${month}${day}-` +
+    `${shortId || "ORDER"}`
+  );
 
-  }
-
-};
+}
 
 
-load();
+/* =========================
+   啟動
+========================= */
+
+async function start() {
+
+  await initMember();
+
+  await loadProducts();
+
+}
+
+
+start();
