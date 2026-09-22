@@ -1,1 +1,111 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>英姐蔬果商行｜每日蔬菜訂購</title><link rel="stylesheet" href="style.css"></head><body><header><b>🥬 英姐蔬果商行</b><a href="admin.html">後台</a></header><main><section class="hero"><h1>今日蔬菜</h1><p>選擇數量後加入購物車，確認資料即可送出訂單。</p></section><div id="status" class="notice">商品載入中…</div><section id="products" class="grid"></section><section class="panel"><h2>🛒 訂購清單 <small id="count">0 項</small></h2><div id="cart"></div><div class="total">合計 <b id="total">NT$0</b></div></section><section class="panel"><h2>訂購資料</h2><label>姓名<input id="name" placeholder="請輸入姓名"></label><label>電話<input id="phone" placeholder="請輸入電話"></label><label>備註<textarea id="note" rows="3"></textarea></label><button id="submit">送出訂單</button><div id="result"></div></section></main><footer>© 英姐蔬果商行</footer><script type="module" src="app.js"></script></body></html>
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>英姐蔬果商行｜每日蔬菜訂購</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<header>
+  <b>🥬 英姐蔬果商行</b>
+  <a href="admin.html">後台</a>
+</header>
+
+<main>
+
+  <section class="hero">
+    <h1>今日蔬菜</h1>
+    <p>選擇數量後加入購物車，確認資料即可送出訂單。</p>
+  </section>
+
+  <div id="status" class="notice">商品載入中…</div>
+
+  <section id="products" class="grid"></section>
+
+  <section class="panel">
+
+    <h2>
+      🛒 訂購清單
+      <small id="count">0 項</small>
+    </h2>
+
+    <div id="cart"></div>
+
+    <div class="total">
+      合計
+      <b id="total">NT$0</b>
+    </div>
+
+  </section>
+
+
+  <section class="panel">
+
+    <h2>訂購資料</h2>
+
+    <label>
+      姓名
+      <input id="name" placeholder="請輸入姓名">
+    </label>
+
+    <label>
+      電話
+      <input
+        id="phone"
+        type="tel"
+        placeholder="例如：0912345678"
+      >
+    </label>
+
+    <label>
+      取貨方式
+
+      <select id="deliveryMethod">
+        <option value="自取">🏪 自取</option>
+        <option value="配送">🚚 配送</option>
+      </select>
+
+    </label>
+
+    <label>
+      希望取貨／配送時間
+
+      <input
+        id="pickupTime"
+        type="datetime-local"
+      >
+
+    </label>
+
+    <label>
+      備註
+
+      <textarea
+        id="note"
+        rows="3"
+        placeholder="例如：下午5點後取貨、配送地址等"
+      ></textarea>
+
+    </label>
+
+    <button id="submit">
+      送出訂單
+    </button>
+
+    <div id="result"></div>
+
+  </section>
+
+</main>
+
+<footer>
+  © 英姐蔬果商行
+</footer>
+
+<script type="module" src="app.js"></script>
+
+</body>
+</html>
