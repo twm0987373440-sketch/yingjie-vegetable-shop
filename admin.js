@@ -461,8 +461,6 @@ const pendingOrders =
           </div>
 <div>
   ${
-    o.deliveryMethod === "配送"
-      ? "🚚 配送"
       : "🏪 自取"
   }
   ｜
