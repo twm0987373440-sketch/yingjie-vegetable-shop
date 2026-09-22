@@ -18,7 +18,6 @@ import {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-
 let products = [];
 
 let cart =
@@ -26,15 +25,12 @@ let cart =
     localStorage.getItem("yjcart") || "{}"
   );
 
-
 const $ = id =>
   document.getElementById(id);
-
 
 const money = n =>
   "NT$" +
   Number(n || 0).toLocaleString("zh-TW");
-
 
 const esc = s =>
   String(s ?? "").replace(
@@ -62,7 +58,6 @@ async function load() {
         collection(db, "products")
       );
 
-
     products =
       snapshot.docs
         .map(d => ({
@@ -78,24 +73,13 @@ async function load() {
             (b.sort ?? 999)
         );
 
-
     if (!products.length) {
-
-      status(
-        "目前沒有上架商品"
-      );
-
+      status("目前沒有上架商品");
     } else {
-
-      status(
-        "商品已更新"
-      );
-
+      status("商品已更新");
     }
 
-
     render();
-
 
   } catch (error) {
 
@@ -130,9 +114,7 @@ function render() {
           ${p.emoji || "🥬"}
         </div>
 
-        <h3>
-          ${esc(p.name)}
-        </h3>
+        <h3>${esc(p.name)}</h3>
 
         <small>
           ${esc(p.unit || "份")}
@@ -150,9 +132,7 @@ function render() {
 
         <div class="qty">
 
-          <button
-            onclick="chg('${p.id}', -1)"
-          >
+          <button onclick="chg('${p.id}', -1)">
             −
           </button>
 
@@ -160,9 +140,7 @@ function render() {
             ${cart[p.id]?.qty || 0}
           </b>
 
-          <button
-            onclick="chg('${p.id}', 1)"
-          >
+          <button onclick="chg('${p.id}', 1)">
             ＋
           </button>
 
@@ -171,7 +149,6 @@ function render() {
       </article>
 
     `).join("");
-
 
   renderCart();
 
@@ -189,9 +166,7 @@ window.chg = (id, change) => {
       p => p.id === id
     );
 
-
   if (!product) return;
-
 
   const qty =
     Math.max(
@@ -199,7 +174,6 @@ window.chg = (id, change) => {
       (cart[id]?.qty || 0) +
       change
     );
-
 
   if (qty) {
 
@@ -214,12 +188,10 @@ window.chg = (id, change) => {
 
   }
 
-
   localStorage.setItem(
     "yjcart",
     JSON.stringify(cart)
   );
-
 
   render();
 
@@ -235,14 +207,12 @@ function renderCart() {
   const items =
     Object.values(cart);
 
-
   $("count").textContent =
     items.reduce(
       (sum, item) =>
         sum + item.qty,
       0
     ) + " 項";
-
 
   $("cart").innerHTML =
     items.length
@@ -270,7 +240,6 @@ function renderCart() {
 
       : "<p>尚未選擇商品</p>";
 
-
   const total =
     items.reduce(
       (sum, item) =>
@@ -279,7 +248,6 @@ function renderCart() {
         item.qty,
       0
     );
-
 
   $("total").textContent =
     money(total);
@@ -297,22 +265,11 @@ async () => {
   const items =
     Object.values(cart);
 
-
   const name =
     $("name").value.trim();
 
-
   const phone =
     $("phone").value.trim();
-
-
-  const deliveryMethod =
-    $("deliveryMethod").value;
-
-
-  const pickupTime =
-    $("pickupTime").value;
-
 
   const note =
     $("note").value.trim();
@@ -320,9 +277,7 @@ async () => {
 
   if (!items.length) {
 
-    alert(
-      "請先選擇商品"
-    );
+    alert("請先選擇商品");
 
     return;
 
@@ -331,20 +286,7 @@ async () => {
 
   if (!name || !phone) {
 
-    alert(
-      "請填寫姓名與電話"
-    );
-
-    return;
-
-  }
-
-
-  if (!pickupTime) {
-
-    alert(
-      "請選擇希望取貨／配送時間"
-    );
+    alert("請填寫姓名與電話");
 
     return;
 
@@ -366,10 +308,6 @@ async () => {
     customerName: name,
 
     customerPhone: phone,
-
-    deliveryMethod,
-
-    pickupTime,
 
     note,
 
@@ -418,7 +356,6 @@ async () => {
     const now =
       new Date();
 
-
     const date =
       [
         now.getFullYear(),
@@ -445,16 +382,11 @@ async () => {
       "yjcart"
     );
 
-
     renderCart();
 
 
     $("name").value = "";
-
     $("phone").value = "";
-
-    $("pickupTime").value = "";
-
     $("note").value = "";
 
 
