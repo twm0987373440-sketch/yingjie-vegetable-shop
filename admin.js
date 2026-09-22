@@ -1,6 +1,4 @@
-import {
-  initializeApp
-} from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
 
 import {
   getFirestore,
@@ -21,10 +19,12 @@ import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
 
-import {
-  firebaseConfig
-} from "./firebase-config.js";
+import { firebaseConfig } from "./firebase-config.js";
 
+
+/* =========================
+   Firebase
+========================= */
 
 const ADMIN_UID = "r8lFDyFoDTUffnwN6waBm0cMlHl1";
 
@@ -32,39 +32,41 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+
+/* =========================
+   共用工具
+========================= */
+
 const $ = id => document.getElementById(id);
 
 const money = n =>
   "NT$" + Number(n || 0).toLocaleString("zh-TW");
 
 const esc = s =>
-  String(s ?? "").replace(
-    /[&<>"']/g,
-    c => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    }[c])
-  );
+  String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[c]));
 
 
 /* =========================
    管理員登入
 ========================= */
 
-$("loginBtn").onclick = async () => {
+$("loginBtn").addEventListener("click", async () => {
 
   const email = $("email").value.trim();
   const password = $("password").value;
-
-  $("msg").textContent = "登入中...";
 
   if (!email || !password) {
     $("msg").textContent = "請輸入 Email 和密碼";
     return;
   }
+
+  $("msg").textContent = "登入中...";
 
   try {
 
@@ -89,25 +91,34 @@ $("loginBtn").onclick = async () => {
 
   } catch (error) {
 
-    console.error(error);
+    console.error("登入錯誤：", error);
 
     $("msg").textContent =
       "登入失敗，請確認 Email 或密碼";
   }
-};
+});
 
 
 /* =========================
    登出
 ========================= */
 
-$("logoutBtn").onclick = async () => {
-  await signOut(auth);
-};
+$("logoutBtn").addEventListener("click", async () => {
+
+  try {
+
+    await signOut(auth);
+
+  } catch (error) {
+
+    console.error("登出錯誤：", error);
+
+  }
+});
 
 
 /* =========================
-   登入狀態
+   監聽登入狀態
 ========================= */
 
 onAuthStateChanged(auth, async user => {
@@ -117,36 +128,53 @@ onAuthStateChanged(auth, async user => {
     $("login").hidden = true;
     $("panel").hidden = false;
 
-    await loadP();
-    await loadO();
+    try {
+
+      await loadProducts();
+      await loadOrders();
+
+    } catch (error) {
+
+      console.error(error);
+
+    }
 
   } else {
 
     $("login").hidden = false;
     $("panel").hidden = true;
+
   }
 });
 
 
 /* =========================
-   商品 / 訂單頁籤
+   頁籤
 ========================= */
 
-$("ot").onclick = () => {
-  $("ordersPanel").hidden = false;
-};
+$("pt").addEventListener("click", () => {
 
-$("pt").onclick = () => {
   $("ordersPanel").hidden = true;
-};
+
+});
+
+
+$("ot").addEventListener("click", async () => {
+
+  $("ordersPanel").hidden = false;
+
+  await loadOrders();
+
+});
 
 
 /* =========================
    新增商品
 ========================= */
 
-$("add").onclick = () =>
-  edit({
+$("add").addEventListener("click", () => {
+
+  editProduct({
     name: "新商品",
     unit: "斤",
     price: 0,
@@ -155,12 +183,14 @@ $("add").onclick = () =>
     sort: 999
   });
 
+});
+
 
 /* =========================
    讀取商品
 ========================= */
 
-async function loadP() {
+async function loadProducts() {
 
   try {
 
@@ -170,30 +200,53 @@ async function loadP() {
       );
 
     const products =
-      snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
+      snapshot.docs.map(item => ({
+        id: item.id,
+        ...item.data()
       }));
 
+
+    products.sort(
+      (a, b) =>
+        (a.sort ?? 999) -
+        (b.sort ?? 999)
+    );
+
+
+    if (!products.length) {
+
+      $("products").innerHTML =
+        '<div class="notice">尚無商品</div>';
+
+      return;
+    }
+
+
     $("products").innerHTML =
-      products.map(p => `
+      products.map(product => `
 
         <div class="row">
 
           <span>
 
-            ${esc(p.emoji || "🥬")}
+            ${esc(product.emoji || "🥬")}
 
-            <b>${esc(p.name)}</b>
+            <b>
+              ${esc(product.name || "")}
+            </b>
 
-            ｜${esc(p.unit)}
+            ｜
+            ${esc(product.unit || "")}
 
-            ｜${money(p.price)}
+            ｜
+            ${money(product.price)}
 
-            ｜${
-              p.active === false
-                ? "下架"
-                : "上架"
+            ｜
+
+            ${
+              product.active === false
+                ? "🔴 下架"
+                : "🟢 上架"
             }
 
           </span>
@@ -201,13 +254,15 @@ async function loadP() {
           <span>
 
             <button
-              onclick='edit(${JSON.stringify(p)})'
+              class="edit-product"
+              data-id="${product.id}"
             >
               編輯
             </button>
 
             <button
-              onclick="delP('${p.id}')"
+              class="delete-product"
+              data-id="${product.id}"
             >
               刪除
             </button>
@@ -216,38 +271,87 @@ async function loadP() {
 
         </div>
 
-      `).join("") || "尚無商品";
+      `).join("");
+
+
+    document
+      .querySelectorAll(".edit-product")
+      .forEach(button => {
+
+        button.addEventListener("click", () => {
+
+          const product =
+            products.find(
+              p => p.id === button.dataset.id
+            );
+
+          if (product) {
+            editProduct(product);
+          }
+
+        });
+
+      });
+
+
+    document
+      .querySelectorAll(".delete-product")
+      .forEach(button => {
+
+        button.addEventListener("click", () => {
+
+          deleteProduct(
+            button.dataset.id
+          );
+
+        });
+
+      });
+
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "商品讀取失敗：",
+      error
+    );
 
     $("products").innerHTML =
       '<div class="notice">商品讀取失敗</div>';
+
   }
 }
 
 
 /* =========================
-   編輯商品
+   編輯 / 新增商品
 ========================= */
 
-window.edit = async p => {
+async function editProduct(product) {
 
   const name =
-    prompt("商品名稱", p.name);
+    prompt(
+      "商品名稱",
+      product.name || ""
+    );
 
   if (name === null) return;
 
 
   const unit =
-    prompt("單位", p.unit);
+    prompt(
+      "單位",
+      product.unit || "斤"
+    );
 
   if (unit === null) return;
 
 
   const price =
-    prompt("單價", p.price);
+    prompt(
+      "單價",
+      product.price ?? 0
+    );
 
   if (price === null) return;
 
@@ -255,37 +359,71 @@ window.edit = async p => {
   const emoji =
     prompt(
       "Emoji",
-      p.emoji || "🥬"
+      product.emoji || "🥬"
     );
 
   if (emoji === null) return;
 
 
+  if (
+    !name.trim() ||
+    !unit.trim()
+  ) {
+
+    alert(
+      "商品名稱和單位不能空白"
+    );
+
+    return;
+  }
+
+
+  if (
+    price.trim() === "" ||
+    Number.isNaN(Number(price)) ||
+    Number(price) < 0
+  ) {
+
+    alert(
+      "請輸入正確的商品價格"
+    );
+
+    return;
+  }
+
+
   const active =
     confirm(
-      "按「確定」＝上架\n按「取消」＝下架"
+      "商品是否上架？\n\n確定＝上架\n取消＝下架"
     );
 
 
   const data = {
-    name,
-    unit,
+
+    name: name.trim(),
+
+    unit: unit.trim(),
+
     price: Number(price),
-    emoji,
+
+    emoji: emoji.trim() || "🥬",
+
     active,
-    sort: p.sort ?? 999
+
+    sort: product.sort ?? 999
+
   };
 
 
   try {
 
-    if (p.id) {
+    if (product.id) {
 
       await updateDoc(
         doc(
           db,
           "products",
-          p.id
+          product.id
         ),
         data
       );
@@ -299,30 +437,41 @@ window.edit = async p => {
         ),
         data
       );
+
     }
 
-    await loadP();
+
+    await loadProducts();
+
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "商品儲存失敗：",
+      error
+    );
 
-    alert("商品儲存失敗");
+    alert(
+      "商品儲存失敗"
+    );
+
   }
-};
+}
 
 
 /* =========================
    刪除商品
 ========================= */
 
-window.delP = async id => {
+async function deleteProduct(id) {
 
-  if (
-    !confirm("確定刪除這個商品？")
-  ) {
-    return;
-  }
+  const ok =
+    confirm(
+      "確定要刪除這個商品嗎？\n\n刪除後無法復原。"
+    );
+
+  if (!ok) return;
+
 
   try {
 
@@ -334,32 +483,40 @@ window.delP = async id => {
       )
     );
 
-    await loadP();
+    await loadProducts();
+
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "商品刪除失敗：",
+      error
+    );
 
-    alert("商品刪除失敗");
+    alert(
+      "商品刪除失敗"
+    );
+
   }
-};
+}
 
 
 /* =========================
    訂單管理
 ========================= */
 
-async function loadO() {
+async function loadOrders() {
 
   try {
+
+    $("orders").innerHTML =
+      '<div class="notice">訂單載入中...</div>';
+
 
     const snapshot =
       await getDocs(
         query(
-          collection(
-            db,
-            "orders"
-          ),
+          collection(db, "orders"),
           orderBy(
             "createdAt",
             "desc"
@@ -369,40 +526,42 @@ async function loadO() {
 
 
     const orders =
-      snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
+      snapshot.docs.map(item => ({
+        id: item.id,
+        ...item.data()
       }));
 
 
-    /* =====================
-       待處理訂單
-    ===================== */
+    /* 待處理訂單 */
 
     const pendingOrders =
       orders.filter(
-        o => o.status !== "completed"
+        order =>
+          order.status !== "completed"
       );
 
 
-    /* =====================
-       今日訂單
-    ===================== */
+    /* 今日日期 */
 
     const now = new Date();
 
+
+    /* 今日訂單 */
+
     const todayOrders =
-      orders.filter(o => {
+      orders.filter(order => {
 
         if (
-          !o.createdAt ||
-          !o.createdAt.toDate
+          !order.createdAt ||
+          typeof order.createdAt.toDate !== "function"
         ) {
           return false;
         }
 
+
         const date =
-          o.createdAt.toDate();
+          order.createdAt.toDate();
+
 
         return (
           date.getFullYear() ===
@@ -414,12 +573,11 @@ async function loadO() {
           date.getDate() ===
             now.getDate()
         );
+
       });
 
 
-    /* =====================
-       今日營業額
-    ===================== */
+    /* 今日營業額 */
 
     const todayTotal =
       todayOrders.reduce(
@@ -430,11 +588,9 @@ async function loadO() {
       );
 
 
-    /* =====================
-       今日統計
-    ===================== */
+    /* 統計 */
 
-    const summary = `
+    const summaryHTML = `
 
       <div
         class="panel"
@@ -469,7 +625,7 @@ async function loadO() {
           </div>
 
           <div>
-            待處理訂單：
+            待處理：
             <b>
               ${pendingOrders.length} 筆
             </b>
@@ -482,23 +638,38 @@ async function loadO() {
     `;
 
 
-    /* =====================
-       訂單列表
-    ===================== */
+    /* 沒有訂單 */
 
-    const orderHTML =
-      orders.map(o => {
+    if (!orders.length) {
+
+      $("orders").innerHTML =
+        summaryHTML +
+        '<div class="notice">尚無訂單</div>';
+
+      return;
+    }
+
+
+    /* 訂單內容 */
+
+    const ordersHTML =
+      orders.map(order => {
+
+        const completed =
+          order.status === "completed";
+
 
         let timeText =
           "時間未記錄";
 
+
         if (
-          o.createdAt &&
-          o.createdAt.toDate
+          order.createdAt &&
+          typeof order.createdAt.toDate === "function"
         ) {
 
           timeText =
-            o.createdAt
+            order.createdAt
               .toDate()
               .toLocaleString(
                 "zh-TW",
@@ -510,11 +681,36 @@ async function loadO() {
                   minute: "2-digit"
                 }
               );
+
         }
 
 
-        const completed =
-          o.status === "completed";
+        const itemsHTML =
+          (order.items || [])
+            .map(item => {
+
+              const qty =
+                Number(item.qty || 0);
+
+              const price =
+                Number(item.price || 0);
+
+              return `
+                <div>
+                  ${esc(item.name || "")}
+                  × ${qty}
+                  ${
+                    item.unit
+                      ? " " + esc(item.unit)
+                      : ""
+                  }
+                  ｜
+                  ${money(price * qty)}
+                </div>
+              `;
+
+            })
+            .join("");
 
 
         return `
@@ -530,15 +726,11 @@ async function loadO() {
           >
 
             <div
-              style="
-                margin-bottom:8px;
-              "
+              style="margin-bottom:8px"
             >
 
               <b
-                style="
-                  font-size:18px;
-                "
+                style="font-size:18px"
               >
 
                 ${
@@ -566,7 +758,7 @@ async function loadO() {
 
               <b>
                 ${esc(
-                  o.customerName || ""
+                  order.customerName || ""
                 )}
               </b>
 
@@ -574,7 +766,7 @@ async function loadO() {
 
               📞
               ${esc(
-                o.customerPhone || ""
+                order.customerPhone || ""
               )}
 
             </div>
@@ -585,15 +777,21 @@ async function loadO() {
 
             <div>
 
-              🥬
+              🥬 <b>商品明細</b>
 
-              ${
-                (o.items || [])
-                  .map(i =>
-                    `${esc(i.name)} × ${Number(i.qty || 0)}`
-                  )
-                  .join("、")
-              }
+              <div
+                style="
+                  margin-top:6px;
+                  line-height:1.8;
+                "
+              >
+
+                ${
+                  itemsHTML ||
+                  "沒有商品資料"
+                }
+
+              </div>
 
             </div>
 
@@ -603,21 +801,23 @@ async function loadO() {
 
             <div>
 
-              💰 金額：
+              💰 訂單金額：
 
               <b>
-                ${money(o.total)}
+                ${money(order.total)}
               </b>
 
             </div>
 
 
-            <div>
+            <div
+              style="margin-top:6px"
+            >
 
               📝 備註：
 
               ${esc(
-                o.note || "無"
+                order.note || "無"
               )}
 
             </div>
@@ -626,47 +826,28 @@ async function loadO() {
             <br>
 
 
-            ${
-              completed
+            <button
+              class="status-order"
+              data-id="${order.id}"
+              data-status="${
+                completed
+                  ? "new"
+                  : "completed"
+              }"
+            >
 
-                ? `
+              ${
+                completed
+                  ? "↩️ 恢復新訂單"
+                  : "✓ 完成訂單"
+              }
 
-                  <button
-                    onclick="
-                      setOrderStatus(
-                        '${o.id}',
-                        'new'
-                      )
-                    "
-                  >
-                    ↩️ 恢復新訂單
-                  </button>
-
-                `
-
-                : `
-
-                  <button
-                    onclick="
-                      setOrderStatus(
-                        '${o.id}',
-                        'completed'
-                      )
-                    "
-                  >
-                    ✓ 完成訂單
-                  </button>
-
-                `
-            }
+            </button>
 
 
             <button
-              onclick="
-                deleteOrder(
-                  '${o.id}'
-                )
-              "
+              class="delete-order"
+              data-id="${order.id}"
             >
               🗑 刪除
             </button>
@@ -679,19 +860,65 @@ async function loadO() {
 
 
     $("orders").innerHTML =
-      summary +
-      (
-        orderHTML ||
-        '<div class="notice">尚無訂單</div>'
-      );
+      summaryHTML +
+      ordersHTML;
+
+
+    /* 完成 / 恢復按鈕 */
+
+    document
+      .querySelectorAll(
+        ".status-order"
+      )
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            setOrderStatus(
+              button.dataset.id,
+              button.dataset.status
+            );
+
+          }
+        );
+
+      });
+
+
+    /* 刪除訂單按鈕 */
+
+    document
+      .querySelectorAll(
+        ".delete-order"
+      )
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            deleteOrder(
+              button.dataset.id
+            );
+
+          }
+        );
+
+      });
 
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "訂單讀取失敗：",
+      error
+    );
 
     $("orders").innerHTML =
       '<div class="notice">訂單讀取失敗</div>';
+
   }
 }
 
@@ -700,8 +927,10 @@ async function loadO() {
    完成 / 恢復訂單
 ========================= */
 
-window.setOrderStatus =
-async (id, status) => {
+async function setOrderStatus(
+  id,
+  status
+) {
 
   try {
 
@@ -716,25 +945,30 @@ async (id, status) => {
       }
     );
 
-    await loadO();
+
+    await loadOrders();
+
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "訂單狀態更新失敗：",
+      error
+    );
 
     alert(
       "訂單狀態更新失敗"
     );
+
   }
-};
+}
 
 
 /* =========================
    刪除訂單
 ========================= */
 
-window.deleteOrder =
-async id => {
+async function deleteOrder(id) {
 
   const ok =
     confirm(
@@ -754,14 +988,20 @@ async id => {
       )
     );
 
-    await loadO();
+
+    await loadOrders();
+
 
   } catch (error) {
 
-    console.error(error);
+    console.error(
+      "訂單刪除失敗：",
+      error
+    );
 
     alert(
       "訂單刪除失敗"
     );
+
   }
-};
+}
