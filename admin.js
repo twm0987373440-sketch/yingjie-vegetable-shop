@@ -305,37 +305,200 @@ async function loadO() {
       )
     );
 
-    $("orders").innerHTML =
-      snapshot.docs.map(d => {
+    const orders = snapshot.docs.map(d => ({
+      id: d.id,
+      ...d.data()
+    }));
 
-        const o = d.data();
 
-        return `
+    // ===== 今日日期 =====
 
-          <div class="order">
+    const now = new Date();
 
-            <b>${esc(o.customerName || "")}</b>
-            ｜${esc(o.customerPhone || "")}
+    const todayOrders = orders.filter(o => {
 
-            <br>
+      if (!o.createdAt || !o.createdAt.toDate) {
+        return false;
+      }
 
-            ${(o.items || []).map(i =>
-              `${esc(i.name)} × ${Number(i.qty || 0)}`
-            ).join("、")}
+      const d = o.createdAt.toDate();
 
-            <br>
+      return (
+        d.getFullYear() === now.getFullYear() &&
+        d.getMonth() === now.getMonth() &&
+        d.getDate() === now.getDate()
+      );
 
-            金額：${money(o.total)}
+    });
 
-            <br>
 
-            備註：${esc(o.note || "無")}
+    // ===== 今日營業額 =====
+
+    const todayTotal = todayOrders.reduce(
+      (sum, o) => sum + Number(o.total || 0),
+      0
+    );
+
+
+    // ===== 今日統計 =====
+
+    const summary = `
+
+      <div class="panel" style="margin-bottom:16px">
+
+        <h3>📊 今日訂單統計</h3>
+
+        <div style="
+          display:flex;
+          gap:20px;
+          flex-wrap:wrap;
+          font-size:18px;
+        ">
+
+          <div>
+            今日訂單：
+            <b>${todayOrders.length} 筆</b>
+          </div>
+
+          <div>
+            今日營業額：
+            <b>${money(todayTotal)}</b>
+          </div>
+
+        </div>
+
+      </div>
+
+    `;
+
+
+    // ===== 訂單內容 =====
+
+    const orderHTML = orders.map(o => {
+
+      let timeText = "時間未記錄";
+
+      if (o.createdAt && o.createdAt.toDate) {
+
+        timeText =
+          o.createdAt.toDate().toLocaleString(
+            "zh-TW",
+            {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit"
+            }
+          );
+
+      }
+
+
+      const completed = o.status === "completed";
+
+
+      return `
+
+        <div class="order"
+             style="
+               margin-bottom:15px;
+               padding:15px;
+               border:1px solid #ddd;
+               border-radius:10px;
+             ">
+
+          <div style="margin-bottom:8px">
+
+            <b style="font-size:18px">
+
+              ${
+                completed
+                  ? "🟢 已完成"
+                  : "🟠 新訂單"
+              }
+
+            </b>
 
           </div>
 
-        `;
 
-      }).join("") || "尚無訂單";
+          <div>
+            🕐 ${esc(timeText)}
+          </div>
+
+          <br>
+
+
+          <div>
+
+            👤 <b>${esc(o.customerName || "")}</b>
+
+            ｜
+
+            📞 ${esc(o.customerPhone || "")}
+
+          </div>
+
+
+          <br>
+
+
+          <div>
+
+            🥬 ${
+              (o.items || []).map(i =>
+                `${esc(i.name)} × ${Number(i.qty || 0)}`
+              ).join("、")
+            }
+
+          </div>
+
+
+          <br>
+
+
+          <div>
+            💰 金額：
+            <b>${money(o.total)}</b>
+          </div>
+
+
+          <div>
+            📝 備註：
+            ${esc(o.note || "無")}
+          </div>
+
+
+          <br>
+
+
+          ${
+            completed
+
+              ? `<button onclick="setOrderStatus('${o.id}','new')">
+                   ↩️ 恢復新訂單
+                 </button>`
+
+              : `<button onclick="setOrderStatus('${o.id}','completed')">
+                   ✓ 完成訂單
+                 </button>`
+          }
+
+        </div>
+
+      `;
+
+    }).join("");
+
+
+    $("orders").innerHTML =
+      summary +
+      (
+        orderHTML ||
+        '<div class="notice">尚無訂單</div>'
+      );
+
 
   } catch (error) {
 
@@ -347,3 +510,31 @@ async function loadO() {
   }
 
 }
+
+
+/* =========================
+   訂單狀態
+========================= */
+
+window.setOrderStatus = async (id, status) => {
+
+  try {
+
+    await updateDoc(
+      doc(db, "orders", id),
+      {
+        status: status
+      }
+    );
+
+    await loadO();
+
+  } catch (error) {
+
+    console.error(error);
+
+    alert("訂單狀態更新失敗");
+
+  }
+
+};
