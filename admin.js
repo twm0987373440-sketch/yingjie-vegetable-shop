@@ -310,7 +310,10 @@ async function loadO() {
       ...d.data()
     }));
 
-
+const pendingOrders =
+  orders.filter(
+    o => o.status !== "completed"
+  );
     // ===== 今日日期 =====
 
     const now = new Date();
@@ -370,7 +373,10 @@ async function loadO() {
       </div>
 
     `;
-
+<div>
+  待處理訂單：
+  <b>${pendingOrders.length} 筆</b>
+</div>
 
     // ===== 訂單內容 =====
 
