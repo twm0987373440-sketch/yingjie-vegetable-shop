@@ -459,7 +459,20 @@ const pendingOrders =
             }
 
           </div>
-
+<div>
+  ${
+    o.deliveryMethod === "配送"
+      ? "🚚 配送"
+      : "🏪 自取"
+  }
+  ｜
+  希望時間：
+  ${esc(
+    o.pickupTime
+      ? new Date(o.pickupTime).toLocaleString("zh-TW")
+      : "未填寫"
+  )}
+</div>
 
           <br>
 
