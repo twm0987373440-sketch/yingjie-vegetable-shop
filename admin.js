@@ -1,3 +1,4 @@
+import { photoSource, categoryOf, compressPhoto } from "./shop-utils.js";
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
@@ -457,7 +458,8 @@ async function loadProducts() {
       products
         .map(product => `
 
-          <div class="row">
+          <div class="row product-admin-row">
+            ${photoSource(product.photo) ? `<img class="admin-thumb" src="${esc(photoSource(product.photo))}" alt="${esc(product.name)}">` : `<div class="admin-thumb empty-thumb">🥬</div>`}
 
             <span>
 
@@ -502,7 +504,7 @@ async function loadProducts() {
 
               <button
                 class="edit-product"
-                data-id="${product.id}"
+                data-id="${esc(product.id)}"
                 type="button"
               >
                 編輯
@@ -511,7 +513,7 @@ async function loadProducts() {
 
               <button
                 class="delete-product"
-                data-id="${product.id}"
+                data-id="${esc(product.id)}"
                 type="button"
               >
                 刪除
@@ -597,170 +599,75 @@ async function loadProducts() {
    編輯 / 新增商品
 ========================= */
 
-async function editProduct(
-  product
-) {
-
-  const name =
-    prompt(
-      "商品名稱",
-      product.name ||
-      ""
-    );
-
-
-  if (name === null) {
-    return;
-  }
-
-
-  const unit =
-    prompt(
-      "單位",
-      product.unit ||
-      "斤"
-    );
-
-
-  if (unit === null) {
-    return;
-  }
-
-
-  const price =
-    prompt(
-      "單價",
-      product.price ??
-      0
-    );
-
-
-  if (price === null) {
-    return;
-  }
-
-
-  const emoji =
-    prompt(
-      "Emoji",
-      product.emoji ||
-      "🥬"
-    );
-
-
-  if (emoji === null) {
-    return;
-  }
-
-
-  if (
-    !name.trim() ||
-    !unit.trim()
-  ) {
-
-    alert(
-      "商品名稱和單位不能空白"
-    );
-
-
-    return;
-
-  }
-
-
-  if (
-    String(price).trim() === "" ||
-    Number.isNaN(
-      Number(price)
-    ) ||
-    Number(price) < 0
-  ) {
-
-    alert(
-      "請輸入正確的商品價格"
-    );
-
-
-    return;
-
-  }
-
-
-  const active =
-    confirm(
-      "商品是否上架？\n\n確定＝上架\n取消＝下架"
-    );
-
-
-  const data = {
-
-    name:
-      name.trim(),
-
-    unit:
-      unit.trim(),
-
-    price:
-      Number(price),
-
-    emoji:
-      emoji.trim() ||
-      "🥬",
-
-    active,
-
-    sort:
-      product.sort ??
-      999
-
-  };
-
-
-  try {
-
-    if (product.id) {
-
-      await updateDoc(
-        doc(
-          db,
-          "products",
-          product.id
-        ),
-        data
-      );
-
-
-    } else {
-
-      await addDoc(
-        collection(
-          db,
-          "products"
-        ),
-        data
-      );
-
-    }
-
-
-    await loadProducts();
-
-
-  } catch (error) {
-
-    console.error(
-      "商品儲存失敗：",
-      error
-    );
-
-
-    alert(
-      "商品儲存失敗"
-    );
-
-  }
-
+let editingProduct = null;
+let pendingPhoto = "";
+let photoBusy = false;
+let savingProduct = false;
+let photoGeneration = 0;
+function refreshPhotoPreview() {
+  const src = photoSource(pendingPhoto);
+  $("photoPreview").hidden = !src; $("photoEmpty").hidden = !!src;
+  if(src) $("photoPreview").src = src; else $("photoPreview").removeAttribute("src");
+  $("removeProductPhoto").disabled = !src || photoBusy;
 }
+function editProduct(product) {
+  editingProduct = product; pendingPhoto = photoSource(product.photo); photoGeneration++;
+  $("editorTitle").textContent = product.id ? "編輯商品" : "新增商品";
+  $("productName").value = product.name || "";
+  $("productUnit").value = product.unit || "斤";
+  $("productPrice").value = product.price ?? 0;
+  $("productSort").value = product.sort ?? 999;
+  $("productCategory").value = categoryOf(product);
+  $("productActive").checked = product.active !== false;
+  $("productPhoto").value = ""; $("photoMessage").textContent = "";
+  refreshPhotoPreview(); $("productEditor").showModal();
+}
+$("cancelProduct").addEventListener("click", () => { if(!photoBusy && !savingProduct) $("productEditor").close(); });
+$("productEditor").addEventListener("cancel", event => { if(photoBusy || savingProduct) event.preventDefault(); });
+$("productEditor").addEventListener("close", () => { photoGeneration++; });
+$("productPhoto").addEventListener("change", async event => {
+  const file = event.target.files[0]; if(!file) return;
+  const generation = ++photoGeneration;
+  photoBusy = true; $("saveProduct").disabled = true; $("cancelProduct").disabled = true;
+  $("productPhoto").disabled = true; $("removeProductPhoto").disabled = true;
+  $("photoMessage").textContent = "照片處理中…";
+  try {
+    const data = await compressPhoto(file);
+    if(generation !== photoGeneration) return;
+    pendingPhoto = data;
+    $("photoMessage").textContent = "照片已準備好，請按儲存商品。";
+  } catch(error) { $("photoMessage").textContent = error.message; }
+  finally {
+    photoBusy = false; $("saveProduct").disabled = false; $("cancelProduct").disabled = false;
+    $("productPhoto").disabled = false; event.target.value = ""; refreshPhotoPreview();
+  }
+});
+$("removeProductPhoto").addEventListener("click", () => {
+  pendingPhoto = ""; refreshPhotoPreview(); $("photoMessage").textContent = "照片已移除，儲存商品後生效。";
+});
+$("productForm").addEventListener("submit", async event => {
+  event.preventDefault(); if(photoBusy || savingProduct || !editingProduct) return;
+  const price = Number($("productPrice").value), sort = Number($("productSort").value);
+  const name = $("productName").value.trim(), unit = $("productUnit").value.trim();
+  if(!name || !unit || !Number.isFinite(price) || price < 0 || !Number.isSafeInteger(sort) || sort < 0) {
+    $("photoMessage").textContent = "請確認名稱、單位、價格及排序。"; return;
+  }
+  const data = {name, unit, price, sort, emoji: editingProduct.emoji || "🥬", active: $("productActive").checked, category: $("productCategory").value, photo: pendingPhoto};
+  savingProduct = true;
+  $("productForm").querySelectorAll("button,input,select").forEach(el => el.disabled = true);
+  $("saveProduct").textContent = "儲存中…";
+  try {
+    if(editingProduct.id) await updateDoc(doc(db,"products",editingProduct.id), data);
+    else await addDoc(collection(db,"products"), data);
+    $("productEditor").close(); await loadProducts();
+  } catch(error) {
+    console.error("商品儲存失敗",error);
+    $("photoMessage").textContent = "儲存失敗，照片仍保留在表單中。請確認網路及管理員寫入權限後重試。";
+  } finally {
+    savingProduct = false; $("productForm").querySelectorAll("button,input,select").forEach(el => el.disabled = false);
+    $("saveProduct").textContent = "儲存商品"; refreshPhotoPreview();
+  }
+});
 
 
 /* =========================
@@ -1630,7 +1537,7 @@ $("saveStoreSettings")
 
               <br>
 
-              我們下一步會設定 Firebase 權限。
+              請確認網路連線及管理員的資料庫寫入權限。
 
             </div>
 

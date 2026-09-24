@@ -15,12 +15,12 @@
 
   <link
     rel="stylesheet"
-    href="style.css?v=31"
+    href="style.css?v=40"
   >
-</head>
+<link rel="stylesheet" href="theme.css?v=40"></head>
 
 
-<body>
+<body class="shop-admin">
 
   <!-- =========================
        後台頂部
@@ -438,9 +438,21 @@
   </main>
 
 
+<dialog id="productEditor" class="editor-dialog" aria-labelledby="editorTitle">
+<form id="productForm"><div class="section-title-row"><h2 id="editorTitle">編輯商品</h2><button type="button" id="cancelProduct" class="secondary-button">取消</button></div>
+<div class="photo-editor"><img id="photoPreview" alt="商品照片預覽" hidden><div id="photoEmpty">尚未設定照片</div>
+<label class="upload-button">選擇／更換照片<input id="productPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label>
+<button id="removeProductPhoto" type="button" class="secondary-button">移除照片</button>
+<p class="section-description">保留完整照片並自動壓縮。選好照片後，請按「儲存商品」。</p></div>
+<label class="form-label"><span>商品名稱</span><input id="productName" required maxlength="80"></label>
+<div class="editor-columns"><label class="form-label"><span>單位</span><input id="productUnit" required maxlength="20"></label><label class="form-label"><span>價格（元）</span><input id="productPrice" required type="number" min="0" max="999999" step="0.01"></label></div>
+<div class="editor-columns"><label class="form-label"><span>商品分類</span><select id="productCategory"><option value="leaf">葉菜類</option><option value="root">根莖類</option><option value="mushroom">菇類</option><option value="fruit">水果</option><option value="other">其他蔬果（顯示於今日新鮮）</option></select></label><label class="form-label"><span>排序（數字小的在前面）</span><input id="productSort" type="number" min="0" step="1" required></label></div>
+<label class="check-label"><input id="productActive" type="checkbox">上架商品</label>
+<p id="photoMessage" role="status" aria-live="polite"></p><button id="saveProduct" class="primary-button" type="submit">儲存商品</button></form></dialog>
+
   <script
     type="module"
-    src="admin.js?v=31"
+    src="admin.js?v=40"
   ></script>
 
 </body>

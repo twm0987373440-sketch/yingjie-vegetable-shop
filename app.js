@@ -1,3 +1,4 @@
+import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js";
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
@@ -90,11 +91,13 @@ const demo = [
 let products = [];
 
 
-let cart =
-  JSON.parse(
-    localStorage.getItem("yjcart") ||
-    "{}"
-  );
+let cart = {};
+try { cart = JSON.parse(localStorage.getItem("yjcart") || "{}"); if(!cart || Array.isArray(cart) || typeof cart !== "object") cart = {}; } catch { cart = {}; }
+let currentPage = "home";
+let activeCategory = "all";
+let productsReady = false;
+function saveCart() { try { localStorage.setItem("yjcart", JSON.stringify(cart)); } catch { /* Cart remains usable if storage is full or disabled. */ } }
+
 
 
 let member = null;
@@ -136,6 +139,8 @@ const esc =
 ========================= */
 
 function showPage(pageName) {
+  currentPage = pageName;
+  if($("quickCart")) $("quickCart").hidden = pageName !== "home" || !Object.keys(cart).length;
 
   const pages = [
     "home",
@@ -209,7 +214,7 @@ function initNavigation() {
 
   document
     .querySelectorAll(
-      ".bottom-nav-item"
+      "[data-page]"
     )
     .forEach(button => {
 
@@ -282,7 +287,6 @@ async function loadStoreSettings() {
 
       $("headerStoreName")
         .textContent =
-          "🥬 " +
           data.storeName;
 
     }
@@ -738,16 +742,10 @@ async function loadProducts() {
         );
 
 
-    if (!products.length) {
-
-      products =
-        demo;
-
-    }
-
-
+    productsReady = true;
+    cart = reconcileCart(cart, products); saveCart();
     setStatus(
-      "商品已更新"
+      products.length ? "" : "目前沒有上架商品"
     );
 
 
@@ -762,12 +760,11 @@ async function loadProducts() {
     );
 
 
-    products =
-      demo;
-
+    products = [];
+    productsReady = false;
 
     setStatus(
-      "Firebase 讀取失敗，暫時顯示示範商品。"
+      "商品暫時無法載入，請重新整理後再試。"
     );
 
 
@@ -779,6 +776,7 @@ async function loadProducts() {
 
 
 function setStatus(text) {
+  if($("status")) $("status").hidden = !text;
 
   if ($("status")) {
 
@@ -796,154 +794,47 @@ function setStatus(text) {
 ========================= */
 
 function renderProducts() {
-
-  if (!$("products")) {
+  const visible = products.filter(p => activeCategory === "all" || categoryOf(p) === activeCategory);
+  $("products").innerHTML = visible.map(p => {
+    const qty = cart[p.id]?.qty || 0;
+    const photo = photoSource(p.photo);
+    return `<article class="card">
+      <button class="product-photo" type="button" data-photo-id="${esc(p.id)}" aria-label="放大${esc(p.name)}照片" ${photo ? "" : "disabled"}>
+        ${photo ? `<img src="${esc(photo)}" alt="${esc(p.name)}" loading="lazy" decoding="async">` : `<span class="photo-placeholder"><span>${esc(p.emoji || "🥬")}</span><small>照片準備中</small></span>`}
+      </button>
+      <div class="product-info"><h3>${esc(p.name)}</h3><div class="product-bottom"><div class="price">${money(p.price)} <small>/ ${esc(p.unit || "份")}</small></div>
+      <div class="qty"><button class="qty-minus" data-id="${esc(p.id)}" type="button" aria-label="減少${esc(p.name)}" ${qty ? "" : "disabled"}>−</button><b>${qty}</b><button class="qty-plus" data-id="${esc(p.id)}" type="button" aria-label="增加${esc(p.name)}">＋</button></div></div></div>
+    </article>`;
+  }).join("") || '<p class="category-empty">此分類目前沒有商品</p>';
+  $("products").querySelectorAll("img").forEach(img => img.addEventListener("error", () => {
+    const button = img.closest("button"); button.disabled = true;
+    button.innerHTML = '<span class="photo-placeholder"><span>🥬</span><small>照片暫時無法顯示</small></span>';
+  }));
+  renderCart();
+}
+$("products").addEventListener("click", event => {
+  const step = event.target.closest(".qty-minus,.qty-plus");
+  if(step) {
+    const selector = step.classList.contains("qty-plus") ? ".qty-plus" : ".qty-minus";
+    changeQty(step.dataset.id, selector === ".qty-plus" ? 1 : -1);
+    const replacement = [...$("products").querySelectorAll(selector)].find(b => b.dataset.id === step.dataset.id);
+    if(replacement && !replacement.disabled) replacement.focus({preventScroll:true});
     return;
   }
-
-
-  $("products").innerHTML =
-    products
-      .map(product => {
-
-        const qty =
-          cart[
-            product.id
-          ]?.qty ||
-          0;
-
-
-        return `
-
-          <article class="card">
-
-            <div class="emoji">
-
-              ${esc(
-                product.emoji ||
-                "🥬"
-              )}
-
-            </div>
-
-
-            <h3>
-
-              ${esc(
-                product.name
-              )}
-
-            </h3>
-
-
-            <small>
-
-              ${esc(
-                product.unit ||
-                "份"
-              )}
-
-            </small>
-
-
-            <div class="price">
-
-              ${money(
-                product.price
-              )}
-
-              <small>
-
-                /
-                ${esc(
-                  product.unit ||
-                  "份"
-                )}
-
-              </small>
-
-            </div>
-
-
-            <div class="qty">
-
-              <button
-                class="qty-minus"
-                data-id="${product.id}"
-                type="button"
-              >
-                −
-              </button>
-
-
-              <b>
-                ${qty}
-              </b>
-
-
-              <button
-                class="qty-plus"
-                data-id="${product.id}"
-                type="button"
-              >
-                ＋
-              </button>
-
-            </div>
-
-          </article>
-
-        `;
-
-      })
-      .join("");
-
-
-  document
-    .querySelectorAll(
-      ".qty-minus"
-    )
-    .forEach(button => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          changeQty(
-            button.dataset.id,
-            -1
-          );
-
-        }
-      );
-
-    });
-
-
-  document
-    .querySelectorAll(
-      ".qty-plus"
-    )
-    .forEach(button => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          changeQty(
-            button.dataset.id,
-            1
-          );
-
-        }
-      );
-
-    });
-
-
-  renderCart();
-
-}
+  const button = event.target.closest("[data-photo-id]");
+  const p = button && products.find(p => p.id === button.dataset.photoId);
+  if(!p || !photoSource(p.photo)) return;
+  $("zoomPhoto").src = photoSource(p.photo); $("zoomPhoto").alt = p.name;
+  $("zoomCaption").textContent = p.name; $("photoDialog").showModal();
+});
+$("closePhoto").addEventListener("click", () => $("photoDialog").close());
+$("photoDialog").addEventListener("click", e => { if(e.target === $("photoDialog")) $("photoDialog").close(); });
+document.querySelectorAll("[data-category]").forEach(b => b.addEventListener("click", () => {
+  activeCategory = b.dataset.category;
+  document.querySelectorAll("[data-category]").forEach(x => {
+    x.classList.toggle("active", x === b); x.setAttribute("aria-pressed", String(x === b));
+  }); renderProducts();
+}));
 
 
 /* =========================
@@ -985,7 +876,7 @@ function changeQty(
     cart[id] = {
 
       p:
-        product,
+        cartProduct(product),
 
       qty
 
@@ -999,10 +890,7 @@ function changeQty(
   }
 
 
-  localStorage.setItem(
-    "yjcart",
-    JSON.stringify(cart)
-  );
+  saveCart();
 
 
   renderProducts();
@@ -1015,6 +903,7 @@ function changeQty(
 ========================= */
 
 function renderCart() {
+  cart = reconcileCart(cart, productsReady ? products : null);
 
   const items =
     Object.values(cart);
@@ -1258,6 +1147,11 @@ function renderCart() {
     );
 
 
+  $("quickCount").textContent = `共 ${count} 件商品`;
+  $("quickTotal").textContent = money(total);
+  $("headerCartBadge").textContent = count > 99 ? "99+" : String(count);
+  $("headerCartBadge").hidden = !count;
+  $("quickCart").hidden = currentPage !== "home" || !count;
   if ($("total")) {
 
     $("total")
@@ -1280,8 +1174,8 @@ if ($("submit")) {
       "click",
       async () => {
 
-        const items =
-          Object.values(cart);
+        if(!db || !productsReady) { alert("目前無法送出訂單，請確認商品已載入後再試。"); return; }
+        const items = Object.values(cart);
 
 
         const name =
@@ -1613,14 +1507,14 @@ async function start() {
     讀取店家資訊
   */
 
-  await loadStoreSettings();
+  const settingsTask = loadStoreSettings();
 
 
   /*
     LINE 會員
   */
 
-  await initMember();
+  const memberTask = initMember();
 
 
   /*
