@@ -15,9 +15,9 @@
 
   <link
     rel="stylesheet"
-    href="style.css?v=41"
+    href="style.css?v=42"
   >
-<link rel="stylesheet" href="theme.css?v=41"></head>
+<link rel="stylesheet" href="theme.css?v=42"></head>
 
 
 <body class="shop-admin">
@@ -206,7 +206,7 @@
             </h2>
 
             <p class="section-description">
-              管理每日商品、照片、價格及上下架
+              管理每日商品、價格及上下架
             </p>
 
           </div>
@@ -223,7 +223,6 @@
         </div>
 
 
-        <p id="productSaveStatus" role="status" aria-live="polite"></p>
         <div id="products"></div>
 
       </section>
@@ -444,9 +443,7 @@
 <div class="photo-editor"><img id="photoPreview" alt="商品照片預覽" hidden><div id="photoEmpty">尚未設定照片</div>
 <label class="upload-button">選擇／更換照片<input id="productPhoto" type="file" accept="image/jpeg,image/png,image/webp"></label>
 <button id="removeProductPhoto" type="button" class="secondary-button">移除照片</button>
-<p class="section-description">照片會自動壓縮並上傳至網站的 GitHub 圖片資料夾。選好後請按「儲存商品」。</p>
-<label class="form-label"><span>GitHub 照片上傳憑證（只有新增照片時需要）</span><input id="photoUploadToken" type="password" autocomplete="off" spellcheck="false" placeholder="Fine-grained personal access token"></label>
-<p class="section-description">憑證只用於這次上傳，不會存進網站或商品資料。請勿把憑證傳給別人。</p></div>
+<p class="section-description">保留完整照片並自動壓縮。選好照片後，請按「儲存商品」。</p></div>
 <label class="form-label"><span>商品名稱</span><input id="productName" required maxlength="80"></label>
 <div class="editor-columns"><label class="form-label"><span>單位</span><input id="productUnit" required maxlength="20"></label><label class="form-label"><span>價格（元）</span><input id="productPrice" required type="number" min="0" max="999999" step="0.01"></label></div>
 <div class="editor-columns"><label class="form-label"><span>商品分類</span><select id="productCategory"><option value="leaf">葉菜類</option><option value="root">根莖類</option><option value="mushroom">菇類</option><option value="fruit">水果</option><option value="other">其他蔬果（顯示於今日新鮮）</option></select></label><label class="form-label"><span>排序（數字小的在前面）</span><input id="productSort" type="number" min="0" step="1" required></label></div>
@@ -455,7 +452,7 @@
 
   <script
     type="module"
-    src="admin.js?v=41"
+    src="admin.js?v=42"
   ></script>
 
 </body>

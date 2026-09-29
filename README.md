@@ -20,15 +20,18 @@ Firebase Console → Firestore Database → Rules：先備份目前線上規則�
 
 本次沒有寫入正式資料庫，也没有代為發布上述規則。
 
-## 上傳商品照片（GitHub 免費方案）
+## 上傳商品照片
 
-後台登入 → 商品管理 → 編輯／新增 → 選擇照片 → 確認預覽 → 輸入 GitHub 照片上傳憑證 → 按「儲存商品」。照片存放在此 repository 的 `images/`，Firestore 的 `products.photo` 只儲存照片網址。不需要 Firebase Storage 或 Blaze 計費。若只修改文字、價格或移除照片，不需要憑證。
+後台登入 → 商品管理 → 編輯 → 選擇／更換照片 → 確認預覽 → **儲存商品**。
 
-請在 GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens 建立憑證。Repository access 選 **Only select repositories**，指定 `yingjie-vegetable-shop`；Repository permissions → Contents 選 **Read and write**，設定到期日。憑證可寫入指定 repository 的所有內容，務必只在自己信任的裝置與本網站使用，不要傳到聊天、不存進原始碼；如外洩立即撤銷。憑證只用於當次照片上傳，不會寫入 Firebase 或瀏覽器儲存空間。
+- 支援 JPG、PNG、WebP；HEIC 請先轉 JPG。
+- 原圖上限 20 MB，自動等比例縮小到長邊最多 1000 像素並轉成 JPEG，資料字串限制 550,000 字元。
+- 不裁掉原照片；商品卡顯示裁切縮圖，點擊看完整照片。
+- 更換、移除都要按「儲存商品」才生效；取消會放棄本次編輯。
+- 照片存入 Firestore products 文件的 photo 欄位，不需另外開通 Firebase Storage。
+- 顧客重新整理後看到更新；未上傳時顯示「照片準備中」。
 
-支援 JPG、PNG、WebP；原圖上限 20 MB，自動保持完整比例縮小到長邊最多 1000 像素並壓縮為 JPEG。照片成功上傳後，GitHub Pages 可能需要幾分鐘才顯示。公開網站的照片任何人都可以看，舊照片不會自動刪除，請定期整理 `images/`。未上傳照片時仍顯示「照片準備中」。
-
-Firestore 原有商品寫入規則仍需允許管理員更新 `products`。如上傳成功但儲存商品失敗，編輯表單保留照片網址，修正權限後重試無需重新上傳。若取消編輯，已上傳但未存入商品的照片仍留在 GitHub，需自行清理。
+未附真實商品照片，請從後台加入實拍照片。橫幅為 AI 生成的裝飾图，可替換 vegetable-hero.png。
 
 ## 分類與公告
 
