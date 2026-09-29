@@ -1,4 +1,5 @@
 import { photoSource, categoryOf, compressPhoto } from "./shop-utils.js";
+import { generatedPhotoFor } from "./product-photos.js";
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
@@ -459,7 +460,7 @@ async function loadProducts() {
         .map(product => `
 
           <div class="row product-admin-row">
-            ${photoSource(product.photo) ? `<img class="admin-thumb" src="${esc(photoSource(product.photo))}" alt="${esc(product.name)}">` : `<div class="admin-thumb empty-thumb">🥬</div>`}
+            ${photoSource(product.photo) || generatedPhotoFor(product.name) ? `<img class="admin-thumb" src="${esc(photoSource(product.photo) || generatedPhotoFor(product.name))}" alt="${esc(product.name)}">` : `<div class="admin-thumb empty-thumb">🥬</div>`}
 
             <span>
 
@@ -605,10 +606,11 @@ let photoBusy = false;
 let savingProduct = false;
 let photoGeneration = 0;
 function refreshPhotoPreview() {
-  const src = photoSource(pendingPhoto);
+  const ownPhoto = photoSource(pendingPhoto);
+  const src = ownPhoto || generatedPhotoFor(editingProduct?.name);
   $("photoPreview").hidden = !src; $("photoEmpty").hidden = !!src;
   if(src) $("photoPreview").src = src; else $("photoPreview").removeAttribute("src");
-  $("removeProductPhoto").disabled = !src || photoBusy;
+  $("removeProductPhoto").disabled = !ownPhoto || photoBusy;
 }
 function editProduct(product) {
   editingProduct = product; pendingPhoto = photoSource(product.photo); photoGeneration++;

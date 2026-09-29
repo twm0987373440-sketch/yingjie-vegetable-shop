@@ -1,4 +1,5 @@
 import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js";
+import { generatedPhotoFor } from "./product-photos.js";
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
@@ -797,10 +798,11 @@ function renderProducts() {
   const visible = products.filter(p => activeCategory === "all" || categoryOf(p) === activeCategory);
   $("products").innerHTML = visible.map(p => {
     const qty = cart[p.id]?.qty || 0;
-    const photo = photoSource(p.photo);
+    const ownPhoto = photoSource(p.photo);
+    const photo = ownPhoto || generatedPhotoFor(p.name);
     return `<article class="card">
       <button class="product-photo" type="button" data-photo-id="${esc(p.id)}" aria-label="放大${esc(p.name)}照片" ${photo ? "" : "disabled"}>
-        ${photo ? `<img src="${esc(photo)}" alt="${esc(p.name)}" loading="lazy" decoding="async">` : `<span class="photo-placeholder"><span>${esc(p.emoji || "🥬")}</span><small>照片準備中</small></span>`}
+        ${photo ? `<img src="${esc(photo)}" alt="${esc(p.name)}" loading="lazy" decoding="async">${!ownPhoto ? '<span class="generated-photo-label">示意圖</span>' : ""}` : `<span class="photo-placeholder"><span>${esc(p.emoji || "🥬")}</span><small>照片準備中</small></span>`}
       </button>
       <div class="product-info"><h3>${esc(p.name)}</h3><div class="product-bottom"><div class="price">${money(p.price)} <small>/ ${esc(p.unit || "份")}</small></div>
       <div class="qty"><button class="qty-minus" data-id="${esc(p.id)}" type="button" aria-label="減少${esc(p.name)}" ${qty ? "" : "disabled"}>−</button><b>${qty}</b><button class="qty-plus" data-id="${esc(p.id)}" type="button" aria-label="增加${esc(p.name)}">＋</button></div></div></div>
@@ -823,9 +825,11 @@ $("products").addEventListener("click", event => {
   }
   const button = event.target.closest("[data-photo-id]");
   const p = button && products.find(p => p.id === button.dataset.photoId);
-  if(!p || !photoSource(p.photo)) return;
-  $("zoomPhoto").src = photoSource(p.photo); $("zoomPhoto").alt = p.name;
-  $("zoomCaption").textContent = p.name; $("photoDialog").showModal();
+  const ownPhoto = p && photoSource(p.photo);
+  const photo = ownPhoto || (p && generatedPhotoFor(p.name));
+  if(!photo) return;
+  $("zoomPhoto").src = photo; $("zoomPhoto").alt = p.name;
+  $("zoomCaption").textContent = p.name + (ownPhoto ? "" : "（示意圖）"); $("photoDialog").showModal();
 });
 $("closePhoto").addEventListener("click", () => $("photoDialog").close());
 $("photoDialog").addEventListener("click", e => { if(e.target === $("photoDialog")) $("photoDialog").close(); });

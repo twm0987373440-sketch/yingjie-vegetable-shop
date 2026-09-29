@@ -51,3 +51,7 @@ Firebase Console → Firestore Database → Rules：先備份目前線上規則�
 ## 設計資產
 
 內建 imagegen 生成 vegetable-hero.png。提示詞：Photorealistic editorial banner photograph for a Taiwanese fresh vegetable shop, landscape 3:1 composition. Right 65 percent: rustic woven basket with fresh cabbage, broccoli, bok choy, carrots, ripe tomatoes, shimeji mushrooms on warm worn wood. Left 35 percent deliberately dark soft out-of-focus olive green garden background for website headline overlay, no items on left. Natural morning side light, appetizing fresh vegetables with subtle dew, sophisticated forest green palette, natural and authentic, not oversaturated. No text, no letters, no logos, no framing, no UI. This is a decorative website hero background.
+
+## 商品示意照片
+
+目前 45 種商品附有 AI 生成的蔬菜示意照片，於商品頁標示「示意圖」。後台上傳並儲存商品照片後，會優先顯示店家照片；移除後恢復示意圖。圖片檔位於 `images/products/`，名稱對應在 `product-photos.js`。新商品若未列入對照表，仍顯示原本的照片準備中畫面。
