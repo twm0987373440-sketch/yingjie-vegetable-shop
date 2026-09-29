@@ -601,6 +601,7 @@ async function loadProducts() {
 
 let editingProduct = null;
 let pendingPhoto = "";
+let photoSelected = false;
 let photoBusy = false;
 let savingProduct = false;
 let photoGeneration = 0;
@@ -611,7 +612,7 @@ function refreshPhotoPreview() {
   $("removeProductPhoto").disabled = !src || photoBusy;
 }
 function editProduct(product) {
-  editingProduct = product; pendingPhoto = photoSource(product.photo); photoGeneration++;
+  editingProduct = product; pendingPhoto = photoSource(product.photo); photoSelected = false; photoGeneration++;
   $("editorTitle").textContent = product.id ? "編輯商品" : "新增商品";
   $("productName").value = product.name || "";
   $("productUnit").value = product.unit || "斤";
@@ -619,7 +620,7 @@ function editProduct(product) {
   $("productSort").value = product.sort ?? 999;
   $("productCategory").value = categoryOf(product);
   $("productActive").checked = product.active !== false;
-  $("productPhoto").value = ""; $("photoMessage").textContent = "";
+  $("productPhoto").value = ""; $("photoUploadToken").value = ""; $("photoMessage").textContent = "";
   refreshPhotoPreview(); $("productEditor").showModal();
 }
 $("cancelProduct").addEventListener("click", () => { if(!photoBusy && !savingProduct) $("productEditor").close(); });
@@ -635,6 +636,7 @@ $("productPhoto").addEventListener("change", async event => {
     const data = await compressPhoto(file);
     if(generation !== photoGeneration) return;
     pendingPhoto = data;
+    photoSelected = true;
     $("photoMessage").textContent = "照片已準備好，請按儲存商品。";
   } catch(error) { $("photoMessage").textContent = error.message; }
   finally {
@@ -643,7 +645,7 @@ $("productPhoto").addEventListener("change", async event => {
   }
 });
 $("removeProductPhoto").addEventListener("click", () => {
-  pendingPhoto = ""; refreshPhotoPreview(); $("photoMessage").textContent = "照片已移除，儲存商品後生效。";
+  pendingPhoto = ""; photoSelected = false; refreshPhotoPreview(); $("photoMessage").textContent = "照片已移除，儲存商品後生效。";
 });
 $("productForm").addEventListener("submit", async event => {
   event.preventDefault(); if(photoBusy || savingProduct || !editingProduct) return;
@@ -652,22 +654,65 @@ $("productForm").addEventListener("submit", async event => {
   if(!name || !unit || !Number.isFinite(price) || price < 0 || !Number.isSafeInteger(sort) || sort < 0) {
     $("photoMessage").textContent = "請確認名稱、單位、價格及排序。"; return;
   }
+  const newPhoto = photoSelected && pendingPhoto.startsWith("data:image/jpeg;base64,");
+  const uploadToken = $("photoUploadToken").value.trim();
+  if(newPhoto && !uploadToken) {
+    $("photoMessage").textContent = "請先輸入 GitHub 照片上傳憑證。"; return;
+  }
   const data = {name, unit, price, sort, emoji: editingProduct.emoji || "🥬", active: $("productActive").checked, category: $("productCategory").value, photo: pendingPhoto};
+  let photoUploaded = false;
   savingProduct = true;
   $("productForm").querySelectorAll("button,input,select").forEach(el => el.disabled = true);
-  $("saveProduct").textContent = "儲存中…";
+  $("saveProduct").textContent = newPhoto ? "照片上傳中…" : "儲存中…";
   try {
+    if(newPhoto) {
+      data.photo = await uploadProductPhoto(pendingPhoto, uploadToken);
+      pendingPhoto = data.photo; // Keep the uploaded URL if the Firestore write needs retrying.
+      photoSelected = false;
+      photoUploaded = true;
+      $("photoUploadToken").value = "";
+      $("photoMessage").textContent = "照片已上傳，正在儲存商品…";
+    }
     if(editingProduct.id) await updateDoc(doc(db,"products",editingProduct.id), data);
     else await addDoc(collection(db,"products"), data);
     $("productEditor").close(); await loadProducts();
+    $("productSaveStatus").textContent = newPhoto
+      ? "照片已上傳，商品已儲存。網站照片顯示可能需要幾分鐘。"
+      : "商品已儲存。";
   } catch(error) {
     console.error("商品儲存失敗",error);
-    $("photoMessage").textContent = "儲存失敗，照片仍保留在表單中。請確認網路及管理員寫入權限後重試。";
+    $("photoMessage").textContent = newPhoto && !photoUploaded
+      ? "照片上傳失敗；請確認憑證限定此 repository 且 Contents 權限為 Read and write。"
+      : photoUploaded
+        ? "照片已上傳，但商品儲存失敗；請檢查 Firestore 管理員寫入權限後重試，無需再次輸入憑證。"
+        : "商品儲存失敗；請檢查網路和 Firestore 管理員寫入權限。";
   } finally {
     savingProduct = false; $("productForm").querySelectorAll("button,input,select").forEach(el => el.disabled = false);
     $("saveProduct").textContent = "儲存商品"; refreshPhotoPreview();
   }
 });
+
+async function uploadProductPhoto(dataUrl, token) {
+  const path = `images/product-${crypto.randomUUID()}.jpg`;
+  const response = await fetch(
+    `https://api.github.com/repos/twm0987373440-sketch/yingjie-vegetable-shop/contents/${path}`,
+    {
+      method: "PUT",
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: `Add product photo ${path}`,
+        content: dataUrl.slice(dataUrl.indexOf(",") + 1),
+        branch: "main"
+      })
+    }
+  );
+  if(!response.ok) throw new Error(`GitHub upload failed (${response.status})`);
+  return `https://twm0987373440-sketch.github.io/yingjie-vegetable-shop/${path}`;
+}
 
 
 /* =========================
