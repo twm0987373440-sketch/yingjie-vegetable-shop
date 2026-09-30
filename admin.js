@@ -491,17 +491,20 @@ async function loadProducts() {
 
               ｜
 
-              ${
-                product.active ===
-                false
-                  ? "🔴 下架"
-                  : "🟢 上架"
-              }
+              <span class="product-availability">${product.active === false ? "🔴 下架" : "🟢 上架"}</span>
 
             </span>
 
 
             <span>
+
+              <button class="toggle-product" type="button" role="switch"
+                aria-checked="${product.active !== false}"
+                aria-label="${esc(product.name || "商品")}上架"
+                data-id="${esc(product.id)}">
+                <span class="product-switch-track" aria-hidden="true"><span></span></span>
+                <span class="product-switch-text">${product.active !== false ? "已上架" : "已下架"}</span>
+              </button>
 
               <button
                 class="edit-product"
@@ -527,6 +530,35 @@ async function loadProducts() {
         `)
         .join("");
 
+
+    $("products").querySelectorAll(".toggle-product").forEach(button => {
+      button.addEventListener("click", async () => {
+        const product = products.find(p => p.id === button.dataset.id);
+        if (!product || button.disabled) return;
+        const nextActive = product.active === false;
+        const row = button.closest(".product-admin-row");
+        const controls = [...row.querySelectorAll("button")];
+        controls.forEach(control => control.disabled = true);
+        button.setAttribute("aria-busy", "true");
+        const text = button.querySelector(".product-switch-text");
+        text.textContent = "儲存中…";
+        try {
+          await updateDoc(doc(db, "products", product.id), { active: nextActive });
+          product.active = nextActive;
+          button.setAttribute("aria-checked", String(nextActive));
+          row.querySelector(".product-availability").textContent = nextActive ? "🟢 上架" : "🔴 下架";
+          $("productStatusMessage").textContent = product.name + (nextActive ? "已上架。" : "已下架，仍保留在後台。");
+        } catch (error) {
+          console.error("商品上下架失敗", error);
+          $("productStatusMessage").textContent = "上下架儲存失敗，商品狀態未變更。請確認網路及管理員權限後重試。";
+          alert("上下架儲存失敗，請稍後再試。");
+        } finally {
+          text.textContent = product.active !== false ? "已上架" : "已下架";
+          button.removeAttribute("aria-busy");
+          controls.forEach(control => control.disabled = false);
+        }
+      });
+    });
 
     document
       .querySelectorAll(
