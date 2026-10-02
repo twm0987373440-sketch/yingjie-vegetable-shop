@@ -17,7 +17,16 @@
     rel="stylesheet"
     href="style.css?v=43"
   >
-<link rel="stylesheet" href="theme.css?v=44"></head>
+<link rel="stylesheet" href="theme.css?v=44"><style>
+.bulk-product{display:grid;grid-template-columns:minmax(0,1fr) 120px 70px;gap:12px;align-items:center;padding:16px 0;border-bottom:1px solid #ddd}
+.bulk-product small{display:block;color:#666;margin-top:6px}
+.bulk-product label{font-size:14px}.bulk-product input.bulk-price{width:100%;min-height:44px;font-size:18px;box-sizing:border-box}
+.bulk-active-label{display:flex;align-items:center;gap:6px;min-height:44px}.bulk-active-label input{width:22px;height:22px}
+.bulk-details{grid-column:1/-1;display:flex;gap:8px}.bulk-details button{min-height:40px}
+.bulk-toolbar{position:sticky;bottom:0;background:#fff;padding:12px 0 max(12px,env(safe-area-inset-bottom));border-top:1px solid #ddd;z-index:5}
+.bulk-toolbar p{margin:0 0 10px}.bulk-toolbar button{margin-bottom:8px}
+@media(max-width:380px){.bulk-product{grid-template-columns:minmax(0,1fr) 100px 64px;gap:6px}}
+</style></head>
 
 
 <body class="shop-admin">
@@ -206,7 +215,7 @@
             </h2>
 
             <p class="section-description">
-              開關立即儲存上下架；下架商品仍可編輯，修改價格請按「編輯」。
+              直接修改每項價格，勾選今日要上架的商品，最後一次儲存。未勾選的商品保留在後台。
             </p>
 
           </div>
@@ -224,7 +233,13 @@
 
 
         <p id="productStatusMessage" role="status" aria-live="polite"></p>
+        <button id="bulkAll" class="secondary-button" type="button">全部勾選上架</button>
         <div id="products"></div>
+        <div class="bulk-toolbar">
+          <p id="bulkSummary" role="status" aria-live="polite">商品載入中…</p>
+          <button id="bulkSave" type="button" class="primary-button" disabled>儲存價格與上架設定</button>
+          <button id="bulkCancel" type="button" class="secondary-button" disabled>取消修改</button>
+        </div>
 
       </section>
 
@@ -453,9 +468,10 @@
 
   <script
     type="module"
-    src="admin.js?v=44"
+    src="admin.js?v=45"
   ></script>
 
 </body>
 
 </html>
+

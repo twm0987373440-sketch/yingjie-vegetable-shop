@@ -6,6 +6,7 @@ import {
 
 import {
   getFirestore,
+  writeBatch,
   collection,
   getDocs,
   getDoc,
@@ -231,6 +232,7 @@ $("logoutBtn")
 
       try {
 
+        if (!allowProductAction()) return;
         await signOut(auth);
 
       } catch (error) {
@@ -382,6 +384,7 @@ $("add")
     "click",
     () => {
 
+      if (!allowProductAction()) return;
       editProduct({
 
         name:
@@ -412,220 +415,107 @@ $("add")
    讀取商品
 ========================= */
 
-async function loadProducts() {
-
-  try {
-
-    const snapshot =
-      await getDocs(
-        collection(
-          db,
-          "products"
-        )
-      );
-
-
-    const products =
-      snapshot.docs
-        .map(item => ({
-
-          id:
-            item.id,
-
-          ...item.data()
-
-        }));
-
-
-    products.sort(
-      (a, b) =>
-        (a.sort ?? 999) -
-        (b.sort ?? 999)
-    );
-
-
-    if (!products.length) {
-
-      $("products").innerHTML =
-        '<div class="notice">尚無商品</div>';
-
-
-      return;
-
-    }
-
-
-    $("products").innerHTML =
-      products
-        .map(product => `
-
-          <div class="row product-admin-row">
-            ${photoSource(product.photo) || generatedPhotoFor(product.name) ? `<img class="admin-thumb" src="${esc(photoSource(product.photo) || generatedPhotoFor(product.name))}" alt="${esc(product.name)}">` : `<div class="admin-thumb empty-thumb">🥬</div>`}
-
-            <span>
-
-              ${esc(
-                product.emoji ||
-                "🥬"
-              )}
-
-              <b>
-                ${esc(
-                  product.name ||
-                  ""
-                )}
-              </b>
-
-              ｜
-
-              ${esc(
-                product.unit ||
-                ""
-              )}
-
-              ｜
-
-              ${money(
-                product.price
-              )}
-
-              ｜
-
-              <span class="product-availability">${product.active === false ? "🔴 下架" : "🟢 上架"}</span>
-
-            </span>
-
-
-            <span>
-
-              <button class="toggle-product" type="button" role="switch"
-                aria-checked="${product.active !== false}"
-                aria-label="${esc(product.name || "商品")}上架"
-                data-id="${esc(product.id)}">
-                <span class="product-switch-track" aria-hidden="true"><span></span></span>
-                <span class="product-switch-text">${product.active !== false ? "已上架" : "已下架"}</span>
-              </button>
-
-              <button
-                class="edit-product"
-                data-id="${esc(product.id)}"
-                type="button"
-              >
-                編輯
-              </button>
-
-
-              <button
-                class="delete-product"
-                data-id="${esc(product.id)}"
-                type="button"
-              >
-                刪除
-              </button>
-
-            </span>
-
-          </div>
-
-        `)
-        .join("");
-
-
-    $("products").querySelectorAll(".toggle-product").forEach(button => {
-      button.addEventListener("click", async () => {
-        const product = products.find(p => p.id === button.dataset.id);
-        if (!product || button.disabled) return;
-        const nextActive = product.active === false;
-        const row = button.closest(".product-admin-row");
-        const controls = [...row.querySelectorAll("button")];
-        controls.forEach(control => control.disabled = true);
-        button.setAttribute("aria-busy", "true");
-        const text = button.querySelector(".product-switch-text");
-        text.textContent = "儲存中…";
-        try {
-          await updateDoc(doc(db, "products", product.id), { active: nextActive });
-          product.active = nextActive;
-          button.setAttribute("aria-checked", String(nextActive));
-          row.querySelector(".product-availability").textContent = nextActive ? "🟢 上架" : "🔴 下架";
-          $("productStatusMessage").textContent = product.name + (nextActive ? "已上架。" : "已下架，仍保留在後台。");
-        } catch (error) {
-          console.error("商品上下架失敗", error);
-          $("productStatusMessage").textContent = "上下架儲存失敗，商品狀態未變更。請確認網路及管理員權限後重試。";
-          alert("上下架儲存失敗，請稍後再試。");
-        } finally {
-          text.textContent = product.active !== false ? "已上架" : "已下架";
-          button.removeAttribute("aria-busy");
-          controls.forEach(control => control.disabled = false);
-        }
-      });
-    });
-
-    document
-      .querySelectorAll(
-        ".edit-product"
-      )
-      .forEach(button => {
-
-        button.addEventListener(
-          "click",
-          () => {
-
-            const product =
-              products.find(
-                p =>
-                  p.id ===
-                  button.dataset.id
-              );
-
-
-            if (product) {
-
-              editProduct(
-                product
-              );
-
-            }
-
-          }
-        );
-
-      });
-
-
-    document
-      .querySelectorAll(
-        ".delete-product"
-      )
-      .forEach(button => {
-
-        button.addEventListener(
-          "click",
-          () => {
-
-            deleteProduct(
-              button.dataset.id
-            );
-
-          }
-        );
-
-      });
-
-
-  } catch (error) {
-
-    console.error(
-      "商品讀取失敗：",
-      error
-    );
-
-
-    $("products").innerHTML =
-      '<div class="notice">商品讀取失敗</div>';
-
+let productDrafts = [];
+let bulkBusy = false;
+let productsLoading = false;
+const dirtyProducts = () => productDrafts.filter(p => p.priceText !== String(p.price ?? 0) || p.nextActive !== (p.active !== false));
+function allowProductAction() {
+  if (bulkBusy || productsLoading) return false;
+  if (dirtyProducts().length) {
+    alert("您有尚未儲存的改價／上架設定，請先按「儲存價格與上架設定」或「取消修改」。");
+    return false;
   }
-
+  return true;
 }
+window.addEventListener("beforeunload", event => {
+  if (bulkBusy || dirtyProducts().length) { event.preventDefault(); event.returnValue = ""; }
+});
+function updateBulkStatus() {
+  const count = dirtyProducts().length;
+  $("bulkSave").disabled = bulkBusy || !count;
+  $("bulkCancel").disabled = bulkBusy || !count;
+  $("bulkSummary").textContent = count ? `${count} 項尚未儲存；按下儲存後才會更新前台。` : "價格與上架設定已同步。";
+}
+function renderProductRows() {
+  $("products").innerHTML = productDrafts.map(p => `
+    <div class="bulk-product" data-id="${esc(p.id)}">
+      <div><b>${esc(p.name)}</b><small>每${esc(p.unit || "份")}</small></div>
+      <label>價格（元）<input class="bulk-price" type="number" inputmode="decimal" min="0" max="999999" step="0.01" required value="${esc(p.priceText)}" aria-label="${esc(p.name)}價格"></label>
+      <label class="bulk-active-label"><input class="bulk-active" type="checkbox" ${p.nextActive ? "checked" : ""}>上架</label>
+      <div class="bulk-details"><button type="button" class="edit-product">詳細編輯</button><button type="button" class="delete-product">刪除</button></div>
+    </div>`).join("") || '<div class="notice">尚無商品</div>';
+  $("products").querySelectorAll(".bulk-product").forEach(row => {
+    const p = productDrafts.find(item => item.id === row.dataset.id);
+    row.querySelector(".bulk-price").addEventListener("input", event => { p.priceText = event.target.value; updateBulkStatus(); });
+    row.querySelector(".bulk-active").addEventListener("change", event => { p.nextActive = event.target.checked; updateBulkStatus(); });
+    row.querySelector(".edit-product").addEventListener("click", () => { if (allowProductAction()) editProduct(p); });
+    row.querySelector(".delete-product").addEventListener("click", () => { if (allowProductAction()) deleteProduct(p.id); });
+  });
+  updateBulkStatus();
+}
+async function loadProducts() {
+  if (bulkBusy || productsLoading || dirtyProducts().length) return;
+  productsLoading = true;
+  try {
+    const snapshot = await getDocs(collection(db, "products"));
+    productDrafts = snapshot.docs.map(item => ({...item.data(), id: item.id}));
+    productDrafts.sort((a,b) => (a.sort ?? 999) - (b.sort ?? 999));
+    productDrafts.forEach(p => { p.priceText = String(p.price ?? 0); p.nextActive = p.active !== false; });
+    renderProductRows();
+  } catch (error) {
+    console.error("商品讀取失敗", error);
+    $("productStatusMessage").textContent = "商品讀取失敗，請點商品管理重試。";
+  } finally { productsLoading = false; }
+}
+$("bulkCancel").addEventListener("click", () => {
+  if (bulkBusy || !confirm("取消這次尚未儲存的價格與上架修改？")) return;
+  productDrafts.forEach(p => { p.priceText = String(p.price ?? 0); p.nextActive = p.active !== false; });
+  renderProductRows();
+});
+$("bulkAll").addEventListener("click", () => {
+  if (bulkBusy || productsLoading) return;
+  productDrafts.forEach(p => { p.nextActive = true; });
+  renderProductRows();
+});
+$("bulkSave").addEventListener("click", async () => {
+  if (bulkBusy || productsLoading || auth.currentUser?.uid !== ADMIN_UID) return;
+  const changed = dirtyProducts();
+  if (!changed.length) return;
+  for (const p of changed) {
+    const input = [...$("products").querySelectorAll(".bulk-product")].find(row => row.dataset.id === p.id).querySelector(".bulk-price");
+    if (!p.priceText.trim() || !Number.isFinite(Number(p.priceText)) || !input.checkValidity()) {
+      $("productStatusMessage").textContent = `請檢查「${p.name}」價格：須為 0～999999 元，最多兩位小數。`;
+      input.reportValidity(); input.focus(); return;
+    }
+  }
+  if (changed.length > 500) { alert("一次最多儲存 500 項，請減少本次修改數量。"); return; }
+  bulkBusy = true;
+  const controls = [...$("panel").querySelectorAll("button,input,select")];
+  const previous = controls.map(el => el.disabled);
+  controls.forEach(el => el.disabled = true);
+  $("bulkSave").textContent = "儲存中…";
+  $("productStatusMessage").textContent = "正在儲存，請保持網頁開啟…";
+  try {
+    const batch = writeBatch(db);
+    changed.forEach(p => {
+      const patch = {};
+      if (p.priceText !== String(p.price ?? 0)) patch.price = Number(p.priceText);
+      if (p.nextActive !== (p.active !== false)) patch.active = p.nextActive;
+      batch.update(doc(db, "products", p.id), patch);
+    });
+    await batch.commit();
+    changed.forEach(p => { p.price = Number(p.priceText); p.priceText = String(p.price); p.active = p.nextActive; });
+    $("productStatusMessage").textContent = `已儲存 ${changed.length} 項！前台重新整理後即可看到最新價格與上架商品。`;
+  } catch (error) {
+    console.error("批次儲存失敗", error);
+    $("productStatusMessage").textContent = "儲存失敗，本次修改未送出；輸入內容已保留，請確認網路及管理員權限後重試。";
+  } finally {
+    bulkBusy = false;
+    controls.forEach((el,i) => el.disabled = previous[i]);
+    $("bulkSave").textContent = "儲存價格與上架設定";
+    updateBulkStatus();
+  }
+});
 
 
 /* =========================
@@ -1593,3 +1483,4 @@ $("saveStoreSettings")
 
     }
   );
+
