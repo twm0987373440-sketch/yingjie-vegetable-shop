@@ -1009,6 +1009,7 @@ async function loadOrders() {
 
               <div>
 
+                ${Number(order.discount) > 0 ? `<div style="margin-bottom:8px;color:#f0cc79">3包50元優惠：原價 ${money(order.subtotal)} − 折扣 ${money(order.discount)}</div>` : ""}
                 💰 訂單金額：
 
                 <b>
@@ -1483,4 +1484,5 @@ $("saveStoreSettings")
 
     }
   );
+
 

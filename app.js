@@ -1,3 +1,4 @@
+import { isBundleProduct, priceCart } from "./bundle-pricing.js?v=20261004";
 import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js";
 import { generatedPhotoFor } from "./product-photos.js?v=20261003";
 import {
@@ -795,7 +796,9 @@ function setStatus(text) {
 ========================= */
 
 function renderProducts() {
-  const visible = products.filter(p => activeCategory === "all" || categoryOf(p) === activeCategory);
+  const visible = products.filter(p => activeCategory === "all" || (activeCategory === "bundle" ? isBundleProduct(p) : categoryOf(p) === activeCategory));
+  $("productsTitle").textContent = activeCategory === "bundle" ? "3包50元專區" : "今日精選";
+  $("productsDescription").textContent = activeCategory === "bundle" ? "專區商品任選混搭，每滿3包50元；其餘每包20元。" : "選擇數量後加入購物車";
   $("products").innerHTML = visible.map(p => {
     const qty = cart[p.id]?.qty || 0;
     const ownPhoto = photoSource(p.photo);
@@ -804,7 +807,7 @@ function renderProducts() {
       <button class="product-photo" type="button" data-photo-id="${esc(p.id)}" aria-label="放大${esc(p.name)}照片" ${photo ? "" : "disabled"}>
         ${photo ? `<img src="${esc(photo)}" alt="${esc(p.name)}" loading="lazy" decoding="async">${!ownPhoto ? '<span class="generated-photo-label">示意圖</span>' : ""}` : `<span class="photo-placeholder"><span>${esc(p.emoji || "🥬")}</span><small>照片準備中</small></span>`}
       </button>
-      <div class="product-info"><h3>${esc(p.name)}</h3><div class="product-bottom"><div class="price">${money(p.price)} <small>/ ${esc(p.unit || "份")}</small></div>
+      <div class="product-info"><h3>${esc(p.name)}</h3>${isBundleProduct(p) ? '<span class="bundle-badge">任選3包50元</span>' : ""}<div class="product-bottom"><div class="price">${money(p.price)} <small>/ ${esc(p.unit || "份")}</small></div>
       <div class="qty"><button class="qty-minus" data-id="${esc(p.id)}" type="button" aria-label="減少${esc(p.name)}" ${qty ? "" : "disabled"}>−</button><b>${qty}</b><button class="qty-plus" data-id="${esc(p.id)}" type="button" aria-label="增加${esc(p.name)}">＋</button></div></div></div>
     </article>`;
   }).join("") || '<p class="category-empty">此分類目前沒有商品</p>';
@@ -1139,18 +1142,13 @@ function renderCart() {
   }
 
 
-  const total =
-    items.reduce(
-      (sum, item) =>
-        sum +
-        Number(
-          item.p.price
-        ) *
-        item.qty,
-      0
-    );
+  const { subtotal, discount, bundleQty, total } = priceCart(items);
 
 
+  $("bundleDiscount").hidden = !bundleQty;
+  $("bundleDiscount").textContent = discount
+    ? `商品原價 ${money(subtotal)}｜3包50元優惠（${Math.floor(bundleQty / 3)}組）折抵 ${money(discount)}`
+    : `專區已選 ${bundleQty} 包，再選 ${3 - bundleQty} 包享3包50元`;
   $("quickCount").textContent = `共 ${count} 件商品`;
   $("quickTotal").textContent = money(total);
   $("headerCartBadge").textContent = count > 99 ? "99+" : String(count);
@@ -1232,16 +1230,7 @@ if ($("submit")) {
         }
 
 
-        const total =
-          items.reduce(
-            (sum, item) =>
-              sum +
-              Number(
-                item.p.price
-              ) *
-              item.qty,
-            0
-          );
+        const { subtotal, discount, bundleQty, total } = priceCart(items);
 
 
         const order = {
@@ -1275,6 +1264,10 @@ if ($("submit")) {
               })
             ),
 
+          subtotal,
+          discount,
+          bundleQty,
+          promotion: discount ? "3包50元" : "",
           total,
 
           status:
@@ -1381,6 +1374,7 @@ if ($("submit")) {
 
               金額：
               ${money(total)}
+              ${discount ? `<br><small>已套用3包50元優惠，折抵 ${money(discount)}</small>` : ""}
 
               <br>
 
@@ -1534,3 +1528,4 @@ async function start() {
 
 
 start();
+
