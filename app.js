@@ -1,5 +1,5 @@
 import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js";
-import { generatedPhotoFor } from "./product-photos.js";
+import { generatedPhotoFor } from "./product-photos.js?v=20261003";
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
