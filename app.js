@@ -10,9 +10,7 @@ import {
   collection,
   getDocs,
   getDoc,
-  addDoc,
-  doc,
-  serverTimestamp
+  doc
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
 import {
@@ -1298,49 +1296,30 @@ if ($("submit")) {
 
         try {
 
-          let orderId =
-            "";
-
-
-          if (db) {
-
-            const result =
-              await addDoc(
-                collection(
-                  db,
-                  "orders"
-                ),
-                {
-
-                  ...order,
-
-                  createdAt:
-                    serverTimestamp()
-
-                }
-              );
-
-
-            orderId =
-              result.id;
-
-
-          } else {
-
-            orderId =
-              "DEMO-" +
-              Date.now();
-
-
-            localStorage.setItem(
-              "lastOrder",
-              JSON.stringify(
-                order
-              )
-            );
-
+          // Keep the same request ID after network errors to prevent duplicate orders.
+          const orderPayload = JSON.stringify(order);
+          let pendingOrder;
+          try { pendingOrder = JSON.parse(localStorage.getItem("yj_pending_order") || "null"); } catch {}
+          if (pendingOrder && pendingOrder.payload !== orderPayload) {
+            throw new Error("上一筆訂單尚待確認。請先恢復原訂單內容再送出，或聯絡店家確認後再下新訂單。");
           }
-
+          if (!pendingOrder) {
+            pendingOrder = { requestId: crypto.randomUUID(), payload: orderPayload };
+            localStorage.setItem("yj_pending_order", JSON.stringify(pendingOrder));
+          }
+          const response = await fetch(WORKER_URL + "/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ requestId: pendingOrder.requestId, order }),
+            signal: AbortSignal.timeout(25000)
+          });
+          const saved = await response.json();
+          if (!response.ok || !saved.ok || !saved.orderId) {
+            if (response.status === 400) localStorage.removeItem("yj_pending_order");
+            throw new Error(saved.error || "訂單尚未確認，請以相同內容重試。");
+          }
+          const orderId = saved.orderId;
+          localStorage.removeItem("yj_pending_order");
 
           cart = {};
 
@@ -1408,7 +1387,7 @@ if ($("submit")) {
 
 
           alert(
-            "訂單送出失敗，請稍後再試"
+            error.name === "TimeoutError" || error.name === "TypeError" ? "連線暫時中斷，請保留原訂單內容再次按送出，不會重複建立訂單。" : (error.message || "訂單送出失敗，請稍後再試")
           );
 
 
