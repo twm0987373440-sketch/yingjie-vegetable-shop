@@ -18,6 +18,8 @@
     href="style.css?v=43"
   >
 <link rel="stylesheet" href="theme.css?v=44"><style>
+.tabs button[aria-pressed="true"]{outline:2px solid #d4ad62;outline-offset:2px}
+#productsPanel .section-title-row{flex-wrap:wrap}
 .bulk-product{display:grid;grid-template-columns:minmax(0,1fr) 120px 70px;gap:12px;align-items:center;padding:16px 0;border-bottom:1px solid #ddd}
 .bulk-product small{display:block;color:#666;margin-top:6px}
 .bulk-product label{font-size:14px}.bulk-product input.bulk-price{width:100%;min-height:44px;font-size:18px;box-sizing:border-box}
@@ -147,7 +149,7 @@
           style="
             display:grid;
             grid-template-columns:
-              repeat(3, 1fr);
+              repeat(2, 1fr);
             gap:8px;
           "
         >
@@ -157,9 +159,11 @@
             class="secondary-button"
             type="button"
           >
-            🥬 商品管理
+            🥬 單項商品
           </button>
 
+
+          <button id="bt" class="secondary-button" type="button">🛍️ 3包50元專區</button>
 
           <button
             id="ot"
@@ -210,11 +214,11 @@
 
           <div>
 
-            <h2>
-              🥬 商品管理
+            <h2 id="productSectionTitle">
+              🥬 單項商品
             </h2>
 
-            <p class="section-description">
+            <p id="productSectionDescription" class="section-description">
               直接修改每項價格，勾選今日要上架的商品，最後一次儲存。未勾選的商品保留在後台。
             </p>
 
@@ -226,14 +230,14 @@
             class="secondary-button"
             type="button"
           >
-            ＋ 新增
+            ＋ 新增單項商品
           </button>
 
         </div>
 
 
         <p id="productStatusMessage" role="status" aria-live="polite"></p>
-        <button id="bulkAll" class="secondary-button" type="button">全部勾選上架</button>
+        <button id="bulkAll" class="secondary-button" type="button">本區全部勾選上架</button>
         <div id="products"></div>
         <div class="bulk-toolbar">
           <p id="bulkSummary" role="status" aria-live="polite">商品載入中…</p>
@@ -463,14 +467,13 @@
 <label class="form-label"><span>商品名稱</span><input id="productName" required maxlength="80"></label>
 <div class="editor-columns"><label class="form-label"><span>單位</span><input id="productUnit" required maxlength="20"></label><label class="form-label"><span>價格（元）</span><input id="productPrice" required type="number" min="0" max="999999" step="0.01"></label></div>
 <div class="editor-columns"><label class="form-label"><span>商品分類</span><select id="productCategory"><option value="leaf">葉菜類</option><option value="root">根莖類</option><option value="mushroom">菇類</option><option value="fruit">水果</option><option value="other">其他蔬果（顯示於今日新鮮）</option></select></label><label class="form-label"><span>排序（數字小的在前面）</span><input id="productSort" type="number" min="0" step="1" required></label></div>
-<label class="check-label"><input id="productBundle" type="checkbox">加入3包50元專區</label>
-<p class="section-description">手動勾選並儲存後才加入專區。請設定單價20元、單位「包」；取消勾選即可移出。下架或價格改為其他金額時暫不參加優惠。</p>
+<p id="productKindNote" class="section-description"></p>
 <label class="check-label"><input id="productActive" type="checkbox">上架商品</label>
 <p id="photoMessage" role="status" aria-live="polite"></p><button id="saveProduct" class="primary-button" type="submit">儲存商品</button></form></dialog>
 
   <script
     type="module"
-    src="admin.js?v=20261004-manual"
+    src="admin.js?v=20261004-separate"
   ></script>
 
 </body>

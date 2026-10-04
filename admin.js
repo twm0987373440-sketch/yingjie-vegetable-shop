@@ -311,6 +311,8 @@ onAuthStateChanged(
    後台頁籤
 ========================= */
 
+let productSection = "single";
+
 function showAdminPage(page) {
 
   $("productsPanel").hidden =
@@ -332,16 +334,29 @@ $("pt")
     "click",
     async () => {
 
-      showAdminPage(
-        "products"
-      );
-
-
-      await loadProducts();
+      await openProductSection("single");
 
     }
   );
 
+
+async function openProductSection(section) {
+  if (!allowProductAction()) return;
+  productSection = section;
+  const bundle = section === "bundle";
+  $("productSectionTitle").textContent = bundle ? "🛍️ 3包50元專區" : "🥬 單項商品";
+  $("productSectionDescription").textContent = bundle
+    ? "在這裡獨立新增專區商品。每包20元，任選混搭3包50元；可分別編輯照片與上下架。"
+    : "獨立新增單項商品，自訂單位與價格；修改完成後一次儲存上架設定。";
+  $("add").textContent = bundle ? "＋ 新增3包50元商品" : "＋ 新增單項商品";
+  $("pt").setAttribute("aria-pressed", String(!bundle));
+  $("bt").setAttribute("aria-pressed", String(bundle));
+  $("productStatusMessage").textContent = "";
+  showAdminPage("products");
+  renderProductRows();
+  await loadProducts();
+}
+$("bt").addEventListener("click", () => openProductSection("bundle"));
 
 $("ot")
   .addEventListener(
@@ -388,13 +403,15 @@ $("add")
       editProduct({
 
         name:
-          "新商品",
+          "",
+
+        bundle3for50: productSection === "bundle",
 
         unit:
-          "斤",
+          productSection === "bundle" ? "包" : "斤",
 
         price:
-          0,
+          productSection === "bundle" ? 20 : 0,
 
         emoji:
           "🥬",
@@ -418,7 +435,8 @@ $("add")
 let productDrafts = [];
 let bulkBusy = false;
 let productsLoading = false;
-const dirtyProducts = () => productDrafts.filter(p => p.priceText !== String(p.price ?? 0) || p.nextActive !== (p.active !== false));
+const sectionProducts = () => productDrafts.filter(p => (p.bundle3for50 === true) === (productSection === "bundle"));
+const dirtyProducts = () => sectionProducts().filter(p => p.priceText !== String(p.price ?? 0) || p.nextActive !== (p.active !== false));
 function allowProductAction() {
   if (bulkBusy || productsLoading) return false;
   if (dirtyProducts().length) {
@@ -437,10 +455,10 @@ function updateBulkStatus() {
   $("bulkSummary").textContent = count ? `${count} 項尚未儲存；按下儲存後才會更新前台。` : "價格與上架設定已同步。";
 }
 function renderProductRows() {
-  $("products").innerHTML = productDrafts.map(p => `
+  $("products").innerHTML = sectionProducts().map(p => `
     <div class="bulk-product" data-id="${esc(p.id)}">
-      <div><b>${esc(p.name)}</b><small>每${esc(p.unit || "份")}</small>${p.bundle3for50 === true ? '<small>已勾選3包50元專區</small>' : ""}</div>
-      <label>價格（元）<input class="bulk-price" type="number" inputmode="decimal" min="0" max="999999" step="0.01" required value="${esc(p.priceText)}" aria-label="${esc(p.name)}價格"></label>
+      <div><b>${esc(p.name)}</b><small>每${esc(p.unit || "份")}</small>${p.bundle3for50 === true ? '<small>任選3包50元</small>' : ""}</div>
+      <label>價格（元）<input class="bulk-price" ${p.bundle3for50 === true ? "readonly" : ""} type="number" inputmode="decimal" min="0" max="999999" step="0.01" required value="${esc(p.priceText)}" aria-label="${esc(p.name)}價格"></label>
       <label class="bulk-active-label"><input class="bulk-active" type="checkbox" ${p.nextActive ? "checked" : ""}>上架</label>
       <div class="bulk-details"><button type="button" class="edit-product">詳細編輯</button><button type="button" class="delete-product">刪除</button></div>
     </div>`).join("") || '<div class="notice">尚無商品</div>';
@@ -474,7 +492,7 @@ $("bulkCancel").addEventListener("click", () => {
 });
 $("bulkAll").addEventListener("click", () => {
   if (bulkBusy || productsLoading) return;
-  productDrafts.forEach(p => { p.nextActive = true; });
+  sectionProducts().forEach(p => { p.nextActive = true; });
   renderProductRows();
 });
 $("bulkSave").addEventListener("click", async () => {
@@ -536,14 +554,17 @@ function refreshPhotoPreview() {
 }
 function editProduct(product) {
   editingProduct = product; pendingPhoto = photoSource(product.photo); photoGeneration++;
-  $("editorTitle").textContent = product.id ? "編輯商品" : "新增商品";
+  const bundle = product.bundle3for50 === true;
+  $("editorTitle").textContent = (product.id ? "編輯" : "新增") + (bundle ? "3包50元商品" : "單項商品");
   $("productName").value = product.name || "";
-  $("productUnit").value = product.unit || "斤";
-  $("productPrice").value = product.price ?? 0;
+  $("productUnit").value = bundle ? "包" : product.unit || "斤";
+  $("productUnit").readOnly = bundle;
+  $("productPrice").value = bundle ? 20 : product.price ?? 0;
+  $("productPrice").readOnly = bundle;
   $("productSort").value = product.sort ?? 999;
   $("productCategory").value = categoryOf(product);
   $("productActive").checked = product.active !== false;
-  $("productBundle").checked = product.bundle3for50 === true;
+  $("productKindNote").textContent = bundle ? "3包50元專區商品：固定每包20元，任選混搭3包50元。" : "單項商品：依設定的單價計費。專區商品請至「3包50元專區」新增。";
   $("productPhoto").value = ""; $("photoMessage").textContent = "";
   refreshPhotoPreview(); $("productEditor").showModal();
 }
@@ -577,9 +598,9 @@ $("productForm").addEventListener("submit", async event => {
   if(!name || !unit || !Number.isFinite(price) || price < 0 || !Number.isSafeInteger(sort) || sort < 0) {
     $("photoMessage").textContent = "請確認名稱、單位、價格及排序。"; return;
   }
-  const bundle3for50 = $("productBundle").checked;
+  const bundle3for50 = editingProduct.bundle3for50 === true;
   if (bundle3for50 && (price !== 20 || !["包", "1包", "１包", "每包", "/包", "／包"].includes(unit.replace(/\s/g, "")))) {
-    $("photoMessage").textContent = "加入3包50元專區前，請將單價設為20元、單位設為包；或取消勾選專區。"; return;
+    $("photoMessage").textContent = "專區商品須為每包20元，請重新開啟編輯後儲存。"; return;
   }
   const data = {name, unit, price, sort, bundle3for50, emoji: editingProduct.emoji || "🥬", active: $("productActive").checked, category: $("productCategory").value, photo: pendingPhoto};
   savingProduct = true;
@@ -1489,6 +1510,7 @@ $("saveStoreSettings")
 
     }
   );
+
 
 
 
