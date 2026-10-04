@@ -14,7 +14,7 @@ export function categoryOf(product) {
 }
 // Do not copy photos into the persisted cart or order payload.
 export function cartProduct(p) {
-  return { id: String(p.id), name: String(p.name || ""), unit: String(p.unit || "份"), price: Number(p.price) || 0 };
+  return { id: String(p.id), name: String(p.name || ""), unit: String(p.unit || "份"), price: Number(p.price) || 0, bundle3for50: p.bundle3for50 === true };
 }
 export function reconcileCart(cart, products = null) {
   const out = {};
@@ -50,3 +50,4 @@ export async function compressPhoto(file) {
     throw error;
   } finally { URL.revokeObjectURL(url); }
 }
+

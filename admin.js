@@ -1,4 +1,4 @@
-import { photoSource, categoryOf, compressPhoto } from "./shop-utils.js";
+import { photoSource, categoryOf, compressPhoto } from "./shop-utils.js?v=20261004-manual";
 import { generatedPhotoFor } from "./product-photos.js";
 import {
   initializeApp
@@ -439,7 +439,7 @@ function updateBulkStatus() {
 function renderProductRows() {
   $("products").innerHTML = productDrafts.map(p => `
     <div class="bulk-product" data-id="${esc(p.id)}">
-      <div><b>${esc(p.name)}</b><small>每${esc(p.unit || "份")}</small></div>
+      <div><b>${esc(p.name)}</b><small>每${esc(p.unit || "份")}</small>${p.bundle3for50 === true ? '<small>已勾選3包50元專區</small>' : ""}</div>
       <label>價格（元）<input class="bulk-price" type="number" inputmode="decimal" min="0" max="999999" step="0.01" required value="${esc(p.priceText)}" aria-label="${esc(p.name)}價格"></label>
       <label class="bulk-active-label"><input class="bulk-active" type="checkbox" ${p.nextActive ? "checked" : ""}>上架</label>
       <div class="bulk-details"><button type="button" class="edit-product">詳細編輯</button><button type="button" class="delete-product">刪除</button></div>
@@ -543,6 +543,7 @@ function editProduct(product) {
   $("productSort").value = product.sort ?? 999;
   $("productCategory").value = categoryOf(product);
   $("productActive").checked = product.active !== false;
+  $("productBundle").checked = product.bundle3for50 === true;
   $("productPhoto").value = ""; $("photoMessage").textContent = "";
   refreshPhotoPreview(); $("productEditor").showModal();
 }
@@ -576,7 +577,11 @@ $("productForm").addEventListener("submit", async event => {
   if(!name || !unit || !Number.isFinite(price) || price < 0 || !Number.isSafeInteger(sort) || sort < 0) {
     $("photoMessage").textContent = "請確認名稱、單位、價格及排序。"; return;
   }
-  const data = {name, unit, price, sort, emoji: editingProduct.emoji || "🥬", active: $("productActive").checked, category: $("productCategory").value, photo: pendingPhoto};
+  const bundle3for50 = $("productBundle").checked;
+  if (bundle3for50 && (price !== 20 || !["包", "1包", "１包", "每包", "/包", "／包"].includes(unit.replace(/\s/g, "")))) {
+    $("photoMessage").textContent = "加入3包50元專區前，請將單價設為20元、單位設為包；或取消勾選專區。"; return;
+  }
+  const data = {name, unit, price, sort, bundle3for50, emoji: editingProduct.emoji || "🥬", active: $("productActive").checked, category: $("productCategory").value, photo: pendingPhoto};
   savingProduct = true;
   $("productForm").querySelectorAll("button,input,select").forEach(el => el.disabled = true);
   $("saveProduct").textContent = "儲存中…";
@@ -1484,5 +1489,6 @@ $("saveStoreSettings")
 
     }
   );
+
 
 

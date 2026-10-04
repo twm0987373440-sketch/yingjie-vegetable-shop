@@ -1,7 +1,7 @@
-// Price-based membership keeps the offer in sync with the existing product editor.
+// Participation is opt-in; existing products are excluded until the merchant selects them.
 export function isBundleProduct(product) {
   const unit = String(product?.unit || "").replace(/\s/g, "");
-  return product?.active !== false && Number(product?.price) === 20
+  return product?.bundle3for50 === true && product?.active !== false && Number(product?.price) === 20
     && ["包", "1包", "１包", "每包", "/包", "／包"].includes(unit);
 }
 
@@ -16,3 +16,4 @@ export function priceCart(items) {
   const discount = Math.floor(bundleQty / 3) * 10;
   return { subtotal, bundleQty, discount, total: subtotal - discount };
 }
+

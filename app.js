@@ -1,5 +1,5 @@
-import { isBundleProduct, priceCart } from "./bundle-pricing.js?v=20261004";
-import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js";
+import { isBundleProduct, priceCart } from "./bundle-pricing.js?v=20261004-manual";
+import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js?v=20261004-manual";
 import { generatedPhotoFor } from "./product-photos.js?v=20261003";
 import {
   initializeApp
@@ -810,7 +810,7 @@ function renderProducts() {
       <div class="product-info"><h3>${esc(p.name)}</h3>${isBundleProduct(p) ? '<span class="bundle-badge">任選3包50元</span>' : ""}<div class="product-bottom"><div class="price">${money(p.price)} <small>/ ${esc(p.unit || "份")}</small></div>
       <div class="qty"><button class="qty-minus" data-id="${esc(p.id)}" type="button" aria-label="減少${esc(p.name)}" ${qty ? "" : "disabled"}>−</button><b>${qty}</b><button class="qty-plus" data-id="${esc(p.id)}" type="button" aria-label="增加${esc(p.name)}">＋</button></div></div></div>
     </article>`;
-  }).join("") || '<p class="category-empty">此分類目前沒有商品</p>';
+  }).join("") || (activeCategory === "bundle" ? '<p class="category-empty">專區商品準備中，敬請期待</p>' : '<p class="category-empty">此分類目前沒有商品</p>');
   $("products").querySelectorAll("img").forEach(img => img.addEventListener("error", () => {
     const button = img.closest("button"); button.disabled = true;
     button.innerHTML = '<span class="photo-placeholder"><span>🥬</span><small>照片暫時無法顯示</small></span>';
@@ -1528,4 +1528,5 @@ async function start() {
 
 
 start();
+
 
