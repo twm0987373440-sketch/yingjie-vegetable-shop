@@ -14,7 +14,7 @@ function orderJson(data, status=200) {
  return new Response(status===204?null:JSON.stringify(data), {status, headers:{
   'Content-Type':'application/json; charset=utf-8', 'Cache-Control':'no-store',
   'Access-Control-Allow-Origin':ORDER_ORIGIN, 'Vary':'Origin',
-  'Access-Control-Allow-Methods':'POST, OPTIONS', 'Access-Control-Allow-Headers':'Content-Type'
+  'Access-Control-Allow-Methods':'POST, OPTIONS', 'Access-Control-Allow-Headers':'Content-Type, Authorization'
  }});
 }
 function firestoreValue(value) {
@@ -65,7 +65,7 @@ async function pushOrderNotice(env,row) {
   }
  } catch { await env.ORDER_DB.prepare('UPDATE order_notifications SET last_error=? WHERE request_id=? AND sent=0').bind('LINE network error',row.request_id).run(); }
 }
-async function orderApi(request,env,ctx) {
+async function orderApi(request,env,ctx,getMember=async()=>null) {
  if(request.method==='OPTIONS') return orderJson(null,204);
  if(request.method!=='POST') return orderJson({ok:false,error:'Method not allowed'},405);
  if(request.headers.get('Origin')!==ORDER_ORIGIN) return orderJson({ok:false,error:'Origin not allowed'},403);
@@ -75,6 +75,12 @@ async function orderApi(request,env,ctx) {
   if(text.length>50000) return orderJson({ok:false,error:'訂單內容過長。'},413);
   let body,order;
   try {body=JSON.parse(text);order=validateOrder(body);} catch(e) {return orderJson({ok:false,error:e.message||'訂單格式錯誤。'},400);}
+  const verifiedMember=await getMember(request,env);
+  if((order.memberLoggedIn || request.headers.has('Authorization')) && !verifiedMember) return orderJson({ok:false,error:'會員登入已到期，請重新登入後送出。'},401);
+  if(verifiedMember && order.memberId!==verifiedMember.sub) return orderJson({ok:false,error:'會員身分已變更，請重新整理後送出。'},401);
+  order.memberLoggedIn=Boolean(verifiedMember);
+  order.memberId=verifiedMember?.sub||null;
+  order.memberName=verifiedMember?.name||null;
   const payload=JSON.stringify(order), hash=await orderHash(payload);
   await env.ORDER_DB.prepare(ORDER_SCHEMA).run();
   await env.ORDER_DB.prepare('INSERT OR IGNORE INTO order_notifications(request_id,order_id,payload_hash,payload,total,created,recipient) VALUES(?,?,?,?,?,?,?)').bind(body.requestId,crypto.randomUUID(),hash,payload,order.total,Date.now(),env.LINE_OWNER_USER_ID).run();
