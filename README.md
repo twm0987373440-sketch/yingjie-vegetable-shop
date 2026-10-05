@@ -73,3 +73,54 @@ Firebase Console → Firestore Database → Rules：先備份目前線上規則�
 
 購物車、底部結帳摘要、訂單儲存與送出成功畫面使用同一個計價函式。訂單保留原單價，另記錄subtotal、discount、bundleQty、promotion及折扣後total；後台顯示折扣，舊訂單不重新計價。
 
+
+## LINE 店主下單通知（2026-10-05）
+
+正式前台已改呼叫既有 `yingjie-line-login` Worker 的 `POST /orders`。Worker 在 Firestore 成功建立訂單後發送 LINE 訊息，訊息包含訂單編號、金額與後台連結；顧客姓名、電話及備註不放進 LINE 通知。原會員登入路由保留。
+
+### 正式環境
+- Worker 的 Secret：`LINE_CHANNEL_ACCESS_TOKEN`、`LINE_OWNER_USER_ID`，已加密設定；不要填入前台或提交到 Git。
+- D1 binding：`ORDER_DB`，資料庫 `yingjie-order-notifications`。
+- Worker 排程：每五分鐘執行 `retryOrderNotifications(env)`。網路或 LINE 暫時錯誤以退避間隔重試，首次發送起23小時後停止，避免超出 LINE 的24小時去重期限。永久錯誤標記 `sent=-1`，需管理員處理。
+- D1 在存單成功後清除暫存的顧客資料，保留訂單ID、金額、去重雜湊及通知狀態。未成功存單的暫存資料保留，便於處理不明結果。
+- `sent=1` 表示 LINE API 接受訊息，不代表手機已讀或推播一定顯示；店主須將官方帳號加為好友且未封鎖。
+
+### 程式維護
+`worker/order-service.mjs` 是可測試的服務模組，**不可單獨覆蓋原 Worker**。目前 Dashboard 部署保留原登入程式，將原 `export default` 物件改名為 `legacyWorker`，整合此模組，並使用以下入口（若拆成模組部署，可直接 import）：
+
+```js
+import { orderApi, retryOrderNotifications } from "./order-service.mjs";
+// legacyWorker 為原本完整的 LINE Login 處理程式。
+export default {
+  async fetch(request, env, ctx) {
+    if (new URL(request.url).pathname === "/orders") {
+      return orderApi(request, env, ctx);
+    }
+    return legacyWorker.fetch(request, env);
+  },
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(retryOrderNotifications(env));
+  }
+};
+```
+
+修改 GitHub 的服務模組不會自動部署 Worker；更新時須同步 Cloudflare 程式並保留既有 Secret、D1 binding 與排程。前台則由 GitHub Pages 發布。
+
+### 檢查與故障處理
+前台使用固定 request ID 重試同一筆訂單。網路出錯時保留購物車及待確認ID，勿手動清除瀏覽器資料後立刻重下。若 Firestore 已寫入、但回應中斷導致狀態不明，重試可能被現有 Firestore 權限拒絕，應由管理員依 D1 的 order_id 對照後台確認，避免重複下單。本次未放寬 Firestore 權限，Worker 沒有讀取顧客訂單的管理員權限。
+
+在 D1 Console 查詢通知狀態：
+```sql
+SELECT order_id,total,saved,sent,attempts,last_error
+FROM order_notifications ORDER BY created DESC LIMIT 20;
+```
+
+`saved=1` 表示已確認建立訂單；`sent=0` 待發送，`sent=1` LINE接受，`sent=-1` 需人工處理。權限、金鑰或額度錯誤修正後，只應人工重試已核對的紀錄，注意去重期限。
+
+### 驗證
+已在正式網站送出一筆標示「系統測試－請勿備貨」的三包優惠訂單：原價60、折扣10、合計50；前台成功並清空購物車，D1確認存單成功，LINE在第一次請求接受訊息。測試單保留於正式訂單中，請勿備貨。
+
+隔離測試涵蓋儲存失敗不發送、同ID重試、內容衝突、Origin檢查、金額檢查、CORS、LINE重試及去重、永久錯誤停止。測試需 Node.js 24（使用內建 SQLite）：
+```sh
+node worker/order-service.test.mjs
+```
