@@ -15,7 +15,7 @@
     rel="stylesheet"
     href="style.css?v=43"
   >
-<link rel="stylesheet" href="theme.css?v=20261004"></head>
+<link rel="stylesheet" href="theme.css?v=20261005-member-orders"></head>
 
 
 <body class="shop-front">
@@ -329,30 +329,14 @@
           </div>
 
 
-          <div class="member-menu">
-
-            <div class="member-menu-item">
-
-              <span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h3l3 12h11l3-9H6"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>
-              </span>
-
-              <div>
-
-                <b>
-                  我的訂單
-                </b>
-
-                <small>
-                  訂單查詢功能即將開放
-                </small>
-
-              </div>
-
-            </div>
-
-          </div>
-
+          <section class="member-orders" aria-labelledby="memberOrdersTitle">
+            <div class="member-orders-heading"><div><h2 id="memberOrdersTitle">我的訂單</h2><p>歷史訂單與處理進度</p></div><button id="refreshMemberOrders" class="secondary-button" type="button">重新查詢</button></div>
+            <div class="order-filters" role="group" aria-label="訂單篩選"><button type="button" data-order-filter="all" aria-pressed="true">全部訂單</button><button type="button" data-order-filter="active" aria-pressed="false">處理中</button><button type="button" data-order-filter="completed" aria-pressed="false">已完成</button></div>
+            <p id="memberOrdersMessage" role="status" aria-live="polite"></p>
+            <div id="memberOrdersList"></div>
+            <button id="moreMemberOrders" class="secondary-button" type="button" hidden>顯示更多訂單</button>
+            <p class="member-order-help">顯示使用此 LINE 帳號登入後送出的訂單。未登入時的訂單，請聯絡店家協助查詢。</p>
+          </section>
 
           <button
             id="memberLogout"
@@ -366,6 +350,10 @@
 
       </section>
 
+      <section class="panel member-contact" aria-label="聯絡英姐商行">
+        <h2>聯絡英姐商行</h2>
+        <div class="member-contact-row"><a class="contact-line" href="https://line.me/R/ti/p/@526rbxof" target="_blank" rel="noopener noreferrer">💬 英姐商行 LINE</a><a class="contact-phone" href="tel:0958537765">☎ 0958537765</a></div>
+      </section>
     </section>
 
 
@@ -616,12 +604,9 @@
   </dialog>
   <script
     type="module"
-    src="app.js?v=20261004-line-orders"
+    src="app.js?v=20261005-member-orders"
   ></script>
 
 </body>
 
 </html>
-
-
-

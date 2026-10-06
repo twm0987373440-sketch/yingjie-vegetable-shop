@@ -38,3 +38,32 @@ button,input,textarea,select{font:inherit}button{touch-action:manipulation}butto
 .categories .bundle-category.active{background:#fff0b8;outline:2px solid #f0cc79;outline-offset:3px}
 .bundle-badge{display:inline-block;margin:0 0 8px;padding:3px 8px;border-radius:6px;background:#f0cc79;color:#263522;font-size:12px;font-weight:700}
 .bundle-discount{padding:12px;border:1px solid var(--gold);border-radius:10px;color:var(--gold);font-size:14px;line-height:1.6}
+
+/* Member order history and contact row */
+.member-orders{text-align:left;margin:24px 0}
+.member-orders-heading,.order-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.member-orders h2,.member-contact h2{margin:0 0 6px;font-size:20px}
+.member-orders-heading p,.member-order-help,.order-date{color:var(--muted);font-size:13px}
+.member-orders-heading p{margin:0}
+.order-filters{display:flex;gap:8px;margin:18px 0;flex-wrap:wrap}
+.order-filters button{background:var(--deep);color:var(--ink);border:1px solid var(--line);border-radius:20px;padding:9px 14px;cursor:pointer}
+.order-filters button[aria-pressed="true"]{background:var(--accent);color:#243022;border-color:var(--accent)}
+.member-order-card{border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0;background:var(--deep)}
+.order-card-heading b{font-size:14px;overflow-wrap:anywhere}
+.order-status{background:#4b5a42;color:#e3f4c8;border-radius:20px;font-size:13px;padding:5px 10px}
+.order-progress{display:flex;list-style:none;padding:0;margin:22px 0 14px;gap:5px}
+.order-progress li{flex:1;text-align:center;font-size:12px;color:var(--muted);border-top:4px solid var(--line);padding-top:9px}
+.order-progress li.reached{border-color:var(--accent);color:var(--ink)}
+.order-progress li[aria-current]{font-weight:700;color:var(--gold)}
+.member-order-card summary{cursor:pointer;padding:12px 0;color:var(--gold)}
+.member-order-items{padding:0;list-style:none}
+.member-order-items li{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.member-order-items span{overflow-wrap:anywhere}
+.member-order-items b{white-space:nowrap}
+.order-total{text-align:right}.order-note{white-space:pre-wrap;overflow-wrap:anywhere}
+.member-order-help{line-height:1.8;margin-top:20px}
+.member-contact{margin-top:18px;text-align:left}
+.member-contact-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+.member-contact-row a{flex:1;display:flex;justify-content:center;align-items:center;text-decoration:none;padding:14px 10px;border-radius:10px;font-weight:700;min-width:140px;font-size:14px}
+.contact-line{background:#06c755;color:#092715}.contact-phone{background:var(--gold);color:#3d3323}
+#memberOrdersMessage{font-size:14px;line-height:1.7}

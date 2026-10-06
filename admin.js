@@ -710,8 +710,7 @@ async function loadOrders() {
     const pendingOrders =
       orders.filter(
         order =>
-          order.status !==
-          "completed"
+          !["completed", "cancelled"].includes(order.status)
       );
 
 
@@ -961,9 +960,7 @@ async function loadOrders() {
                 >
 
                   ${
-                    completed
-                      ? "🟢 已完成"
-                      : "🟠 新訂單"
+                    ({new:"🟠 訂單已收到",preparing:"🟡 備貨中",ready:"🟢 可取貨",completed:"✅ 已完成",cancelled:"⚪ 已取消"}[order.status] || "處理中")
                   }
 
                 </b>
@@ -1066,25 +1063,9 @@ async function loadOrders() {
               <br>
 
 
-              <button
-                class="status-order"
-                data-id="${order.id}"
-                data-status="${
-                  completed
-                    ? "new"
-                    : "completed"
-                }"
-                type="button"
-              >
-
-                ${
-                  completed
-                    ? "↩️ 恢復新訂單"
-                    : "✓ 完成訂單"
-                }
-
-              </button>
-
+              <label>訂單進度 <select class="status-order" data-id="${esc(order.id)}" aria-label="訂單進度">
+                ${Object.entries({new:"訂單已收到",preparing:"備貨中",ready:"可取貨",completed:"已完成",cancelled:"已取消"}).map(([value,label])=>`<option value="${value}" ${order.status===value?'selected':''}>${label}</option>`).join("")}
+              </select></label>
 
               <button
                 class="delete-order"
@@ -1114,12 +1095,12 @@ async function loadOrders() {
       .forEach(button => {
 
         button.addEventListener(
-          "click",
+          "change",
           () => {
 
             setOrderStatus(
               button.dataset.id,
-              button.dataset.status
+              button.value
             );
 
           }
@@ -1510,7 +1491,3 @@ $("saveStoreSettings")
 
     }
   );
-
-
-
-

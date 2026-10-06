@@ -140,6 +140,7 @@ const esc =
 
 function showPage(pageName) {
   currentPage = pageName;
+  if(pageName === "member" && member) loadMemberOrders();
   if($("quickCart")) $("quickCart").hidden = pageName !== "home" || !Object.keys(cart).length;
 
   const pages = [
@@ -556,6 +557,8 @@ async function initMember() {
       member
     );
 
+    if(hash.startsWith("#member_token=")) showPage("member");
+
 
   } catch (error) {
 
@@ -573,6 +576,12 @@ async function initMember() {
 
 
 function showLoggedOut() {
+  memberOrdersGeneration++;
+  memberOrders = [];
+  $("refreshMemberOrders").disabled = false;
+  $("moreMemberOrders").hidden = true;
+  $("memberOrdersList").replaceChildren();
+  $("memberOrdersMessage").textContent = "";
 
   member = null;
 
@@ -596,6 +605,7 @@ function showLoggedOut() {
 
 
 function showLoggedIn(data) {
+  if(currentPage === "member") loadMemberOrders();
 
   if ($("memberLoggedOut")) {
 
@@ -688,6 +698,49 @@ if ($("memberLogout")) {
 /* =========================
    商品
 ========================= */
+
+
+let memberOrders = [], memberOrderFilter = "all", memberOrdersShown = 10, memberOrdersGeneration = 0;
+const memberStatus = {new:["訂單已收到","店家將為您確認與準備商品。"],preparing:["備貨中","店家正在準備您的商品。"],ready:["可取貨","商品已備妥，請與店家確認取貨。"],completed:["已完成","感謝您的訂購！"],cancelled:["已取消","如有疑問，請聯絡英姐商行。"]};
+async function loadMemberOrders() {
+  if(!member) return;
+  const generation = ++memberOrdersGeneration;
+  const token = localStorage.getItem("yj_member_token");
+  $("memberOrdersMessage").textContent = "正在查詢您的訂單…";
+  $("refreshMemberOrders").disabled = true;
+  try {
+    const response = await fetch(WORKER_URL + "/member/orders", {headers:{Authorization:"Bearer " + token},signal:AbortSignal.timeout(20000),cache:"no-store"});
+    const result = await response.json();
+    if(generation !== memberOrdersGeneration) return;
+    if(response.status === 401) {localStorage.removeItem("yj_member_token");showLoggedOut();alert("登入已到期，請重新使用 LINE 登入後查詢訂單。");return;}
+    if(!response.ok || !result.ok || !Array.isArray(result.orders)) throw Error(result.error || "訂單暫時無法載入，請重新查詢。");
+    memberOrders = result.orders; memberOrdersShown = 10;
+    renderMemberOrders();
+  } catch(error) {
+    if(generation !== memberOrdersGeneration) return;
+    memberOrders = []; $("memberOrdersList").replaceChildren(); $("moreMemberOrders").hidden = true;
+    $("memberOrdersMessage").textContent = error.name === "TimeoutError" || error.name === "TypeError" ? "連線暫時中斷，請按「重新查詢」，或聯絡英姐商行。" : error.message;
+  } finally {if(generation === memberOrdersGeneration) $("refreshMemberOrders").disabled = false;}
+}
+function renderMemberOrders() {
+  const selected = memberOrders.filter(o => memberOrderFilter === "all" || (memberOrderFilter === "completed" ? o.status === "completed" : !["completed","cancelled"].includes(o.status)));
+  $("memberOrdersMessage").textContent = selected.length ? "共 " + selected.length + " 筆訂單 · 進度以店家更新為準" : (memberOrders.length ? "此分類目前沒有訂單。" : "目前沒有會員訂單，歡迎先到首頁選購。 ");
+  $("memberOrdersList").innerHTML = selected.slice(0,memberOrdersShown).map(order => {
+    const status = memberStatus[order.status] || ["處理中","請聯絡店家確認最新進度。"];
+    const date = new Date(order.createdAt);
+    const validDate = !Number.isNaN(date.getTime());
+    const day = validDate ? new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Taipei",year:"2-digit",month:"2-digit",day:"2-digit"}).format(date).replaceAll("-","") : "";
+    const number = day + "-" + String(order.id).replace(/[^a-zA-Z0-9]/g,"").slice(0,6).toUpperCase();
+    const time = validDate ? date.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}) : "時間未記錄";
+    const steps = ["new","preparing","ready","completed"], current = steps.indexOf(order.status);
+    const progress = current < 0 ? "" : '<ol class="order-progress" aria-label="訂單進度">' + steps.map((step,i)=>'<li class="'+(i<=current?'reached':'')+'" '+(i===current?'aria-current="step"':'')+'>'+({new:"已收到",preparing:"備貨中",ready:"可取貨",completed:"已完成"}[step])+'</li>').join("")+'</ol>';
+    return '<article class="member-order-card"><div class="order-card-heading"><b>訂單 '+esc(number)+'</b><span class="order-status">'+status[0]+'</span></div><p class="order-date">'+esc(time)+'</p>'+progress+'<p>'+status[1]+'</p><details><summary>商品明細 · '+money(order.total)+'</summary><ul class="member-order-items">'+(order.items||[]).map(i=>'<li><span>'+esc(i.name)+' × '+esc(i.qty)+' '+esc(i.unit)+'</span><b>'+money(Number(i.price)*Number(i.qty))+'</b></li>').join("")+'</ul>'+(Number(order.discount)>0?'<p>優惠折抵：'+money(order.discount)+'</p>':'')+'<p class="order-total">訂單金額：<b>'+money(order.total)+'</b></p>'+(order.note?'<p class="order-note">備註：'+esc(order.note)+'</p>':'')+'</details></article>';
+  }).join("");
+  $("moreMemberOrders").hidden = selected.length <= memberOrdersShown;
+}
+$("refreshMemberOrders").addEventListener("click", loadMemberOrders);
+$("moreMemberOrders").addEventListener("click", () => {memberOrdersShown += 10;renderMemberOrders();});
+document.querySelectorAll("[data-order-filter]").forEach(button=>button.addEventListener("click",()=>{memberOrderFilter=button.dataset.orderFilter;memberOrdersShown=10;document.querySelectorAll("[data-order-filter]").forEach(b=>b.setAttribute("aria-pressed",String(b===button)));renderMemberOrders();}));
 
 async function loadProducts() {
 
@@ -1309,13 +1362,14 @@ if ($("submit")) {
           }
           const response = await fetch(WORKER_URL + "/orders", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...(member ? {Authorization: "Bearer " + localStorage.getItem("yj_member_token")} : {}) },
             body: JSON.stringify({ requestId: pendingOrder.requestId, order }),
             signal: AbortSignal.timeout(25000)
           });
           const saved = await response.json();
           if (!response.ok || !saved.ok || !saved.orderId) {
             if (response.status === 400) localStorage.removeItem("yj_pending_order");
+            if(response.status === 401) { localStorage.removeItem("yj_member_token"); showLoggedOut(); showPage("member"); }
             throw new Error(saved.error || "訂單尚未確認，請以相同內容重試。");
           }
           const orderId = saved.orderId;
@@ -1507,5 +1561,3 @@ async function start() {
 
 
 start();
-
-
