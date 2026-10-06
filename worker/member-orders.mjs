@@ -57,7 +57,7 @@ async function memberOrdersApi(request,env) {
   if(!response.ok) throw Error('Order read failed');
   const rows=await response.json();
   if(!Array.isArray(rows) || rows.some(r=>r.error)) throw Error('Invalid query result');
-  const orders=rows.filter(r=>r.document).map(({document:d})=>({id:d.name.split('/').pop(),...Object.fromEntries(Object.entries(d.fields||{}).map(([k,v])=>[k,memberField(v)]))})).filter(o=>o.memberId===member.sub).map(o=>({id:o.id,createdAt:o.createdAt,status:o.status||'new',items:o.items||[],subtotal:o.subtotal,discount:o.discount||0,total:o.total||0,note:o.note||''})).sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt));
+  const orders=rows.filter(r=>r.document).map(({document:d})=>({id:d.name.split('/').pop(),memberId:memberField(d.fields?.memberId),createdAt:memberField(d.fields?.createdAt),status:memberField(d.fields?.status),items:memberField(d.fields?.items),subtotal:memberField(d.fields?.subtotal),discount:memberField(d.fields?.discount),total:memberField(d.fields?.total),note:memberField(d.fields?.note)})).filter(o=>o.memberId===member.sub).map(o=>({id:o.id,createdAt:o.createdAt,status:o.status||'new',items:o.items||[],subtotal:o.subtotal,discount:o.discount||0,total:o.total||0,note:o.note||''})).sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt));
   return memberJson({ok:true,orders});
  } catch { return memberJson({ok:false,error:'訂單暫時無法載入，請稍後重新查詢，或聯絡英姐商行。'},503); }
 }
