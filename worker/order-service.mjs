@@ -65,7 +65,7 @@ async function pushOrderNotice(env,row) {
   }
  } catch { await env.ORDER_DB.prepare('UPDATE order_notifications SET last_error=? WHERE request_id=? AND sent=0').bind('LINE network error',row.request_id).run(); }
 }
-async function orderApi(request,env,ctx,getMember=async()=>null) {
+async function orderApi(request,env,ctx,getMember=async(_request,_env)=>null) {
  if(request.method==='OPTIONS') return orderJson(null,204);
  if(request.method!=='POST') return orderJson({ok:false,error:'Method not allowed'},405);
  if(request.headers.get('Origin')!==ORDER_ORIGIN) return orderJson({ok:false,error:'Origin not allowed'},403);
