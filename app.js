@@ -730,7 +730,7 @@ function renderMemberOrders() {
     const date = new Date(order.createdAt);
     const validDate = !Number.isNaN(date.getTime());
     const day = validDate ? new Intl.DateTimeFormat("sv-SE",{timeZone:"Asia/Taipei",year:"2-digit",month:"2-digit",day:"2-digit"}).format(date).replaceAll("-","") : "";
-    const number = day + "-" + String(order.id).replace(/[^a-zA-Z0-9]/g,"").slice(0,6).toUpperCase();
+    const number = day + "-" + makeOrderSuffix(order.id);
     const time = validDate ? date.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}) : "時間未記錄";
     const steps = ["new","preparing","ready","completed"], current = steps.indexOf(order.status);
     const progress = current < 0 ? "" : '<ol class="order-progress" aria-label="訂單進度">' + steps.map((step,i)=>'<li class="'+(i<=current?'reached':'')+'" '+(i===current?'aria-current="step"':'')+'>'+({new:"已收到",preparing:"備貨中",ready:"可取貨",completed:"已完成"}[step])+'</li>').join("")+'</ol>';
@@ -1467,6 +1467,15 @@ if ($("submit")) {
    訂單編號
 ========================= */
 
+// Display-only suffix; keep the full order ID for storage and lookups.
+function makeOrderSuffix(id) {
+  let value = 0;
+  for (const char of String(id || "")) {
+    value = (value * 31 + char.charCodeAt(0)) % 1000;
+  }
+  return String(value).padStart(3, "0");
+}
+
 function makeOrderNumber(id) {
 
   const now =
@@ -1499,23 +1508,7 @@ function makeOrderNumber(id) {
     );
 
 
-  const shortId =
-    String(id || "")
-      .replace(
-        /[^a-zA-Z0-9]/g,
-        ""
-      )
-      .slice(
-        0,
-        6
-      )
-      .toUpperCase();
-
-
-  return (
-    `${year}${month}${day}-` +
-    `${shortId || "ORDER"}`
-  );
+  return `${year}${month}${day}-${makeOrderSuffix(id)}`;
 
 }
 
