@@ -1,5 +1,6 @@
-import { isBundleProduct, priceCart } from "./bundle-pricing.js?v=20261004-manual";
-import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js?v=20261004-manual";
+import { isWeighedProduct, displayPrice, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
+import { isBundleProduct, priceCart } from "./bundle-pricing.js?v=20261007-weight";
+import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js?v=20261007-weight";
 import { generatedPhotoFor } from "./product-photos.js?v=20261003";
 import {
   initializeApp
@@ -734,7 +735,7 @@ function renderMemberOrders() {
     const time = validDate ? date.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}) : "時間未記錄";
     const steps = ["new","preparing","ready","completed"], current = steps.indexOf(order.status);
     const progress = current < 0 ? "" : '<ol class="order-progress" aria-label="訂單進度">' + steps.map((step,i)=>'<li class="'+(i<=current?'reached':'')+'" '+(i===current?'aria-current="step"':'')+'>'+({new:"已收到",preparing:"備貨中",ready:"可取貨",completed:"已完成"}[step])+'</li>').join("")+'</ol>';
-    return '<article class="member-order-card"><div class="order-card-heading"><b>訂單 '+esc(number)+'</b><span class="order-status">'+status[0]+'</span></div><p class="order-date">'+esc(time)+'</p>'+progress+'<p>'+status[1]+'</p><details><summary>商品明細 · '+money(order.total)+'</summary><ul class="member-order-items">'+(order.items||[]).map(i=>'<li><span>'+esc(i.name)+' × '+esc(i.qty)+' '+esc(i.unit)+'</span><b>'+money(Number(i.price)*Number(i.qty))+'</b></li>').join("")+'</ul>'+(Number(order.discount)>0?'<p>優惠折抵：'+money(order.discount)+'</p>':'')+'<p class="order-total">訂單金額：<b>'+money(order.total)+'</b></p>'+(order.note?'<p class="order-note">備註：'+esc(order.note)+'</p>':'')+'</details></article>';
+    return '<article class="member-order-card"><div class="order-card-heading"><b>訂單 '+esc(number)+'</b><span class="order-status">'+status[0]+'</span></div><p class="order-date">'+esc(time)+'</p>'+progress+'<p>'+status[1]+'</p><details><summary>商品明細 · 預估 '+money(order.total)+'</summary><ul class="member-order-items">'+(order.items||[]).map(i=>'<li><span>'+esc(i.name)+' × '+esc(i.qty)+' '+esc(i.unit)+'</span><b>'+(isWeighedOrderItem(i) ? "櫃檯秤重（未計入預估）" : money(Number(i.price)*Number(i.qty)))+'</b></li>').join("")+'</ul>'+(Number(order.discount)>0?'<p>優惠折抵：'+money(order.discount)+'</p>':'')+'<p class="order-total">預估金額（秤重商品另計）：<b>'+money(order.total)+'</b></p>'+(order.note?'<p class="order-note">備註：'+esc(order.note)+'</p>':'')+'</details></article>';
   }).join("");
   $("moreMemberOrders").hidden = selected.length <= memberOrdersShown;
 }
@@ -858,7 +859,7 @@ function renderProducts() {
       <button class="product-photo" type="button" data-photo-id="${esc(p.id)}" aria-label="放大${esc(p.name)}照片" ${photo ? "" : "disabled"}>
         ${photo ? `<img src="${esc(photo)}" alt="${esc(p.name)}" loading="lazy" decoding="async">${!ownPhoto ? '<span class="generated-photo-label">示意圖</span>' : ""}` : `<span class="photo-placeholder"><span>${esc(p.emoji || "🥬")}</span><small>照片準備中</small></span>`}
       </button>
-      <div class="product-info"><h3>${esc(p.name)}</h3>${isBundleProduct(p) ? '<span class="bundle-badge">任選3包50元</span>' : ""}<div class="product-bottom"><div class="price">${money(p.price)} <small>/ ${esc(p.unit || "份")}</small></div>
+      <div class="product-info"><h3>${esc(p.name)}</h3>${isBundleProduct(p) ? '<span class="bundle-badge">任選3包50元</span>' : ""}<div class="product-bottom"><div class="price">${esc(displayPrice(p))} <small>/ ${esc(p.unit || "份")}</small></div>
       <div class="qty"><button class="qty-minus" data-id="${esc(p.id)}" type="button" aria-label="減少${esc(p.name)}" ${qty ? "" : "disabled"}>−</button><b>${qty}</b><button class="qty-plus" data-id="${esc(p.id)}" type="button" aria-label="增加${esc(p.name)}">＋</button></div></div></div>
     </article>`;
   }).join("") || (activeCategory === "bundle" ? '<p class="category-empty">專區商品準備中，敬請期待</p>' : '<p class="category-empty">此分類目前沒有商品</p>');
@@ -1085,9 +1086,7 @@ function renderCart() {
 
                   <small>
 
-                    ${money(
-                      item.p.price
-                    )}
+                    ${esc(displayPrice(item.p))}
 
                     /
 
@@ -1103,12 +1102,7 @@ function renderCart() {
 
                 <b class="cart-item-price">
 
-                  ${money(
-                    Number(
-                      item.p.price
-                    ) *
-                    item.qty
-                  )}
+                  ${isWeighedProduct(item.p) ? "櫃檯秤重（未計入預估）" : money(Number(item.p.price) * item.qty)}
 
                 </b>
 
@@ -1194,14 +1188,14 @@ function renderCart() {
 
 
   const { subtotal, discount, bundleQty, total } = priceCart(items);
-
+  $("weighedCartNotice").hidden = !items.some(item => isWeighedProduct(item.p));
 
   $("bundleDiscount").hidden = !bundleQty;
   $("bundleDiscount").textContent = discount
     ? `商品原價 ${money(subtotal)}｜3包50元優惠（${Math.floor(bundleQty / 3)}組）折抵 ${money(discount)}`
     : `專區已選 ${bundleQty} 包，再選 ${3 - bundleQty} 包享3包50元`;
   $("quickCount").textContent = `共 ${count} 件商品`;
-  $("quickTotal").textContent = money(total);
+  $("quickTotal").textContent = "預估 " + money(total);
   $("headerCartBadge").textContent = count > 99 ? "99+" : String(count);
   $("headerCartBadge").hidden = !count;
   $("quickCart").hidden = currentPage !== "home" || !count;
@@ -1299,15 +1293,13 @@ if ($("submit")) {
               item => ({
 
                 name:
-                  item.p.name,
+                  orderItemName(item.p),
 
                 unit:
                   item.p.unit,
 
                 price:
-                  Number(
-                    item.p.price
-                  ),
+                  isWeighedProduct(item.p) ? 0 : Number(item.p.price),
 
                 qty:
                   item.qty
@@ -1405,7 +1397,7 @@ if ($("submit")) {
 
               <br><br>
 
-              金額：
+              預估金額（秤重商品另計）：
               ${money(total)}
               ${discount ? `<br><small>已套用3包50元優惠，折抵 ${money(discount)}</small>` : ""}
 

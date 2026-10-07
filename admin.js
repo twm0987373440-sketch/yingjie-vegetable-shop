@@ -1,4 +1,5 @@
-import { photoSource, categoryOf, compressPhoto } from "./shop-utils.js?v=20261004-manual";
+import { parsePriceInput, productPriceInput, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
+import { photoSource, categoryOf, compressPhoto } from "./shop-utils.js?v=20261007-weight";
 import { generatedPhotoFor } from "./product-photos.js";
 import {
   initializeApp
@@ -347,7 +348,7 @@ async function openProductSection(section) {
   $("productSectionTitle").textContent = bundle ? "🛍️ 3包50元專區" : "🥬 單項商品";
   $("productSectionDescription").textContent = bundle
     ? "在這裡獨立新增專區商品。每包20元，任選混搭3包50元；可分別編輯照片與上下架。"
-    : "獨立新增單項商品，自訂單位與價格；修改完成後一次儲存上架設定。";
+    : "價格可輸入數字或「時價」等文字；文字價格不計入預估總額，到櫃檯秤重結帳。修改完成後一次儲存上架設定。";
   $("add").textContent = bundle ? "＋ 新增3包50元商品" : "＋ 新增單項商品";
   $("pt").setAttribute("aria-pressed", String(!bundle));
   $("bt").setAttribute("aria-pressed", String(bundle));
@@ -436,7 +437,7 @@ let productDrafts = [];
 let bulkBusy = false;
 let productsLoading = false;
 const sectionProducts = () => productDrafts.filter(p => (p.bundle3for50 === true) === (productSection === "bundle"));
-const dirtyProducts = () => sectionProducts().filter(p => p.priceText !== String(p.price ?? 0) || p.nextActive !== (p.active !== false));
+const dirtyProducts = () => sectionProducts().filter(p => p.priceText !== productPriceInput(p) || p.nextActive !== (p.active !== false));
 function allowProductAction() {
   if (bulkBusy || productsLoading) return false;
   if (dirtyProducts().length) {
@@ -458,7 +459,7 @@ function renderProductRows() {
   $("products").innerHTML = sectionProducts().map(p => `
     <div class="bulk-product" data-id="${esc(p.id)}">
       <div><b>${esc(p.name)}</b><small>每${esc(p.unit || "份")}</small>${p.bundle3for50 === true ? '<small>任選3包50元</small>' : ""}</div>
-      <label>價格（元）<input class="bulk-price" ${p.bundle3for50 === true ? "readonly" : ""} type="number" inputmode="decimal" min="0" max="999999" step="0.01" required value="${esc(p.priceText)}" aria-label="${esc(p.name)}價格"></label>
+      <label>價格／計價說明<input class="bulk-price" ${p.bundle3for50 === true ? "readonly" : ""} type="text" maxlength="30" required value="${esc(p.priceText)}" aria-label="${esc(p.name)}價格"></label>
       <label class="bulk-active-label"><input class="bulk-active" type="checkbox" ${p.nextActive ? "checked" : ""}>上架</label>
       <div class="bulk-details"><button type="button" class="edit-product">詳細編輯</button><button type="button" class="delete-product">刪除</button></div>
     </div>`).join("") || '<div class="notice">尚無商品</div>';
@@ -478,7 +479,7 @@ async function loadProducts() {
     const snapshot = await getDocs(collection(db, "products"));
     productDrafts = snapshot.docs.map(item => ({...item.data(), id: item.id}));
     productDrafts.sort((a,b) => (a.sort ?? 999) - (b.sort ?? 999));
-    productDrafts.forEach(p => { p.priceText = String(p.price ?? 0); p.nextActive = p.active !== false; });
+    productDrafts.forEach(p => { p.priceText = productPriceInput(p); p.nextActive = p.active !== false; });
     renderProductRows();
   } catch (error) {
     console.error("商品讀取失敗", error);
@@ -487,7 +488,7 @@ async function loadProducts() {
 }
 $("bulkCancel").addEventListener("click", () => {
   if (bulkBusy || !confirm("取消這次尚未儲存的價格與上架修改？")) return;
-  productDrafts.forEach(p => { p.priceText = String(p.price ?? 0); p.nextActive = p.active !== false; });
+  productDrafts.forEach(p => { p.priceText = productPriceInput(p); p.nextActive = p.active !== false; });
   renderProductRows();
 });
 $("bulkAll").addEventListener("click", () => {
@@ -501,8 +502,13 @@ $("bulkSave").addEventListener("click", async () => {
   if (!changed.length) return;
   for (const p of changed) {
     const input = [...$("products").querySelectorAll(".bulk-product")].find(row => row.dataset.id === p.id).querySelector(".bulk-price");
-    if (!p.priceText.trim() || !Number.isFinite(Number(p.priceText)) || !input.checkValidity()) {
-      $("productStatusMessage").textContent = `請檢查「${p.name}」價格：須為 0～999999 元，最多兩位小數。`;
+    try {
+      const pricing = parsePriceInput(p.priceText);
+      if (p.bundle3for50 === true && (pricing.price !== 20 || pricing.priceLabel)) throw Error("專區商品固定每包20元。");
+      if (orderItemName({...p, ...pricing}).length > 100) throw Error("商品名稱與計價說明合計過長，請縮短。");
+      if (!input.checkValidity()) throw Error("請檢查價格欄位。");
+    } catch (error) {
+      $("productStatusMessage").textContent = `請檢查「${p.name}」：${error.message}`;
       input.reportValidity(); input.focus(); return;
     }
   }
@@ -517,12 +523,12 @@ $("bulkSave").addEventListener("click", async () => {
     const batch = writeBatch(db);
     changed.forEach(p => {
       const patch = {};
-      if (p.priceText !== String(p.price ?? 0)) patch.price = Number(p.priceText);
+      if (p.priceText !== productPriceInput(p)) Object.assign(patch, parsePriceInput(p.priceText));
       if (p.nextActive !== (p.active !== false)) patch.active = p.nextActive;
       batch.update(doc(db, "products", p.id), patch);
     });
     await batch.commit();
-    changed.forEach(p => { p.price = Number(p.priceText); p.priceText = String(p.price); p.active = p.nextActive; });
+    changed.forEach(p => { Object.assign(p, parsePriceInput(p.priceText)); p.priceText = productPriceInput(p); p.active = p.nextActive; });
     $("productStatusMessage").textContent = `已儲存 ${changed.length} 項！前台重新整理後即可看到最新價格與上架商品。`;
   } catch (error) {
     console.error("批次儲存失敗", error);
@@ -559,12 +565,12 @@ function editProduct(product) {
   $("productName").value = product.name || "";
   $("productUnit").value = bundle ? "包" : product.unit || "斤";
   $("productUnit").readOnly = bundle;
-  $("productPrice").value = bundle ? 20 : product.price ?? 0;
+  $("productPrice").value = bundle ? 20 : productPriceInput(product);
   $("productPrice").readOnly = bundle;
   $("productSort").value = product.sort ?? 999;
   $("productCategory").value = categoryOf(product);
   $("productActive").checked = product.active !== false;
-  $("productKindNote").textContent = bundle ? "3包50元專區商品：固定每包20元，任選混搭3包50元。" : "單項商品：依設定的單價計費。專區商品請至「3包50元專區」新增。";
+  $("productKindNote").textContent = bundle ? "3包50元專區商品：固定每包20元，任選混搭3包50元。" : "單項商品：可輸入數字價格或「時價」等文字；文字價格不計入預估總額，到櫃檯秤重結帳。專區商品請至「3包50元專區」新增。";
   $("productPhoto").value = ""; $("photoMessage").textContent = "";
   refreshPhotoPreview(); $("productEditor").showModal();
 }
@@ -593,8 +599,11 @@ $("removeProductPhoto").addEventListener("click", () => {
 });
 $("productForm").addEventListener("submit", async event => {
   event.preventDefault(); if(photoBusy || savingProduct || !editingProduct) return;
-  const price = Number($("productPrice").value), sort = Number($("productSort").value);
+  let pricing;
+  try { pricing = parsePriceInput($("productPrice").value); } catch(error) { $("photoMessage").textContent = error.message; return; }
+  const {price, priceLabel} = pricing, sort = Number($("productSort").value);
   const name = $("productName").value.trim(), unit = $("productUnit").value.trim();
+  if(orderItemName({name, ...pricing}).length > 100) { $("photoMessage").textContent = "商品名稱與計價說明合計過長，請縮短。"; return; }
   if(!name || !unit || !Number.isFinite(price) || price < 0 || !Number.isSafeInteger(sort) || sort < 0) {
     $("photoMessage").textContent = "請確認名稱、單位、價格及排序。"; return;
   }
@@ -602,7 +611,7 @@ $("productForm").addEventListener("submit", async event => {
   if (bundle3for50 && (price !== 20 || !["包", "1包", "１包", "每包", "/包", "／包"].includes(unit.replace(/\s/g, "")))) {
     $("photoMessage").textContent = "專區商品須為每包20元，請重新開啟編輯後儲存。"; return;
   }
-  const data = {name, unit, price, sort, bundle3for50, emoji: editingProduct.emoji || "🥬", active: $("productActive").checked, category: $("productCategory").value, photo: pendingPhoto};
+  const data = {name, unit, price, priceLabel, sort, bundle3for50, emoji: editingProduct.emoji || "🥬", active: $("productActive").checked, category: $("productCategory").value, photo: pendingPhoto};
   savingProduct = true;
   $("productForm").querySelectorAll("button,input,select").forEach(el => el.disabled = true);
   $("saveProduct").textContent = "儲存中…";
@@ -922,10 +931,7 @@ async function loadOrders() {
 
                     ｜
 
-                    ${money(
-                      price *
-                      qty
-                    )}
+                    ${isWeighedOrderItem(item) ? "櫃檯秤重（未計入預估）" : money(price * qty)}
 
                   </div>
 
@@ -1033,7 +1039,7 @@ async function loadOrders() {
               <div>
 
                 ${Number(order.discount) > 0 ? `<div style="margin-bottom:8px;color:#f0cc79">3包50元優惠：原價 ${money(order.subtotal)} − 折扣 ${money(order.discount)}</div>` : ""}
-                💰 訂單金額：
+                💰 預估金額（秤重商品另計）：
 
                 <b>
                   ${money(
