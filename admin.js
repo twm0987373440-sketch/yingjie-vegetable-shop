@@ -681,6 +681,16 @@ async function deleteProduct(id) {
    訂單管理
 ========================= */
 
+function pickupInfo(order) {
+  const raw = typeof order?.note === "string" ? order.note : "";
+  const match = /^【取貨日期】(\d{4}-\d{2}-\d{2})\r?\n【取貨時間】(\d{2}:\d{2})(?:\r?\n【備註】([\s\S]*))?$/.exec(raw);
+  return { date: order?.pickupDate || match?.[1] || "",
+           time: order?.pickupTime || match?.[2] || "",
+           note: match ? match[3] || "" : raw };
+}
+
+
+
 async function loadOrders() {
 
   try {
@@ -891,6 +901,8 @@ async function loadOrders() {
           }
 
 
+          const pickup = pickupInfo(order);
+
           const itemsHTML =
             (order.items || [])
               .map(item => {
@@ -1005,6 +1017,8 @@ async function loadOrders() {
               </div>
 
 
+              ${pickup.date ? '<div style="margin:12px 0;padding:12px;border:1px solid #758a64;border-radius:10px;line-height:1.9;background:#364638"><b>📅 取貨安排</b><div>取貨日期：'+esc(pickup.date)+'</div><div>取貨時間：'+esc(pickup.time)+'</div></div>' : ""}
+
               <br>
 
 
@@ -1059,7 +1073,7 @@ async function loadOrders() {
                 📝 備註：
 
                 ${esc(
-                  order.note ||
+                  pickup.note ||
                   "無"
                 )}
 
