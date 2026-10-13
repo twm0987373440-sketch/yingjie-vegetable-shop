@@ -1,7 +1,7 @@
 import { isWeighedProduct, displayPrice, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
 import { isBundleProduct, priceCart } from "./bundle-pricing.js?v=20261007-weight";
 import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js?v=20261007-weight";
-import { generatedPhotoFor } from "./product-photos.js?v=20261003";
+import { generatedPhotoFor, fallbackPhotoFor } from "./product-photos.js?v=20261003";
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
@@ -854,7 +854,7 @@ function renderProducts() {
   $("products").innerHTML = visible.map(p => {
     const qty = cart[p.id]?.qty || 0;
     const ownPhoto = photoSource(p.photo);
-    const photo = ownPhoto || generatedPhotoFor(p.name);
+    const photo = ownPhoto || generatedPhotoFor(p.name, categoryOf(p));
     return `<article class="card">
       <button class="product-photo" type="button" data-photo-id="${esc(p.id)}" aria-label="放大${esc(p.name)}照片" ${photo ? "" : "disabled"}>
         ${photo ? `<img src="${esc(photo)}" alt="${esc(p.name)}" loading="lazy" decoding="async">${!ownPhoto ? '<span class="generated-photo-label">示意圖</span>' : ""}` : `<span class="photo-placeholder"><span>${esc(p.emoji || "🥬")}</span><small>照片準備中</small></span>`}
@@ -864,7 +864,13 @@ function renderProducts() {
     </article>`;
   }).join("") || (activeCategory === "bundle" ? '<p class="category-empty">專區商品準備中，敬請期待</p>' : '<p class="category-empty">此分類目前沒有商品</p>');
   $("products").querySelectorAll("img").forEach(img => img.addEventListener("error", () => {
-    const button = img.closest("button"); button.disabled = true;
+    const button = img.closest("button");
+    if (!img.dataset.fallbackAttempted) {
+      img.dataset.fallbackAttempted = "1";
+      img.src = fallbackPhotoFor();
+      return;
+    }
+    button.disabled = true;
     button.innerHTML = '<span class="photo-placeholder"><span>🥬</span><small>照片暫時無法顯示</small></span>';
   }));
   renderCart();
@@ -881,7 +887,7 @@ $("products").addEventListener("click", event => {
   const button = event.target.closest("[data-photo-id]");
   const p = button && products.find(p => p.id === button.dataset.photoId);
   const ownPhoto = p && photoSource(p.photo);
-  const photo = ownPhoto || (p && generatedPhotoFor(p.name));
+  const photo = ownPhoto || (p && generatedPhotoFor(p.name, categoryOf(p)));
   if(!photo) return;
   $("zoomPhoto").src = photo; $("zoomPhoto").alt = p.name;
   $("zoomCaption").textContent = p.name + (ownPhoto ? "" : "（示意圖）"); $("photoDialog").showModal();
