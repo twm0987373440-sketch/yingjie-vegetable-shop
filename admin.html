@@ -276,6 +276,22 @@
         </div>
 
 
+        <section id="orderAvailabilityPanel" style="margin:16px 0 25px;padding:18px;border:2px solid #8c9a6e;border-radius:14px;background:#344332">
+          <h3 style="font-size:21px;margin:0 0 9px">🛑 接單開關</h3>
+          <label class="check-label" style="font-size:18px;font-weight:700;min-height:48px">
+            <input id="ordersPaused" type="checkbox" disabled>
+            <span>停止接受新訂單</span>
+          </label>
+          <p class="section-description">勾選後按下儲存，前台會跳出停單說明，並停止送出新訂單；取消勾選、儲存即可恢復。</p>
+          <label class="form-label">
+            <span>📢 前台停單說明（可隨時修改）</span>
+            <textarea id="pauseMessage" rows="3" maxlength="240" disabled>因人手不足無法揀貨</textarea>
+          </label>
+          <p id="orderAvailabilityStatus" role="status" aria-live="polite">正在讀取接單狀態…</p>
+          <button id="saveOrderAvailability" type="button" class="primary-button" disabled>💾 儲存接單狀態與說明</button>
+          <p id="orderAvailabilityResult" role="status" aria-live="polite"></p>
+        </section>
+
         <div id="orders"></div>
 
       </section>
@@ -473,7 +489,7 @@
 
   <script
     type="module"
-    src="admin.js?v=20261014-pickup"
+    src="admin.js?v=20261014-order-switch"
   ></script>
 
 </body>

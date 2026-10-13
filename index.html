@@ -15,7 +15,20 @@
     rel="stylesheet"
     href="style.css?v=43"
   >
-<link rel="stylesheet" href="theme.css?v=20261005-member-orders"></head>
+<link rel="stylesheet" href="theme.css?v=20261014-order-switch">
+<style>
+.stop-orders-banner[hidden]{display:none!important}
+.stop-orders-banner{max-width:800px;margin:12px auto 0;padding:18px 22px;border:2px solid #e8bd72;border-radius:14px;background:#5c3927;color:#fff6e5;box-shadow:0 6px 25px #0003}
+.stop-orders-banner strong{display:block;font-size:20px;margin-bottom:7px}
+.stop-orders-message{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}
+.stop-orders-banner button{margin-top:12px;border:1px solid #f6dbaa;border-radius:10px;background:#f6dbaa;color:#392515;padding:9px 18px;font-weight:700}
+.order-pause-dialog{width:min(92vw,430px);max-height:80vh;overflow:auto;border:2px solid #e8bd72;border-radius:18px;background:#374437;color:#fef7e9;padding:27px;text-align:center;box-shadow:0 15px 60px #0008}
+.order-pause-dialog::backdrop{background:rgba(0,0,0,.65)}
+.order-pause-dialog:not([open]){display:none}
+.order-pause-dialog h2{font-size:23px;margin:0 0 15px}
+.order-pause-dialog p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:17px;line-height:1.8}
+.order-pause-dialog button{background:#ffcd70;color:#323127;border:0;border-radius:10px;padding:13px 28px;min-height:44px;font-weight:800}
+</style></head>
 
 
 <body class="shop-front">
@@ -47,6 +60,17 @@
 
   </header>
 
+
+  <section id="orderPauseBanner" class="stop-orders-banner" role="status" aria-live="polite" hidden>
+    <strong>🛑 目前暫停接受網路訂單</strong>
+    <div id="orderPauseBannerMessage" class="stop-orders-message">因人手不足無法揀貨</div>
+    <button type="button" id="showOrderPause">查看暫停下單說明</button>
+  </section>
+  <dialog id="orderPauseDialog" class="order-pause-dialog" aria-labelledby="orderPauseTitle" aria-describedby="orderPauseDialogMessage">
+    <h2 id="orderPauseTitle">🛑 暫停接受網路訂單</h2>
+    <p id="orderPauseDialogMessage">因人手不足無法揀貨</p>
+    <button type="button" id="closeOrderPause">我知道了</button>
+  </dialog>
 
   <main class="app-main">
 
@@ -242,6 +266,7 @@
           id="submit"
           class="primary-button"
           type="button"
+          disabled
         >
           確認送出訂單
         </button>
@@ -623,7 +648,7 @@
   </dialog>
   <script
     type="module"
-    src="app.js?v=20261014-pickup"
+    src="app.js?v=20261014-order-switch"
   ></script>
 
 </body>

@@ -11,6 +11,7 @@ import {
   collection,
   getDocs,
   getDoc,
+  getDocFromServer,
   addDoc,
   updateDoc,
   deleteDoc,
@@ -279,7 +280,8 @@ onAuthStateChanged(
 
         await Promise.all([
           loadProducts(),
-          loadOrders()
+          loadOrders(),
+          loadOrderAvailability()
         ]);
 
 
@@ -369,7 +371,7 @@ $("ot")
       );
 
 
-      await loadOrders();
+      await Promise.all([loadOrders(), loadOrderAvailability()]);
 
     }
   );
@@ -1255,6 +1257,79 @@ async function deleteOrder(id) {
 
 }
 
+
+/* =========================
+   接單狀態（存放於 settings/store）
+========================= */
+
+const DEFAULT_PAUSE_MESSAGE = "因人手不足無法揀貨";
+let availabilitySaving = false;
+
+function renderOrderAvailabilityStatus(paused) {
+  $("orderAvailabilityStatus").textContent = paused
+    ? "🛑 目前已停止接受新訂單"
+    : "✅ 目前正常接受新訂單";
+}
+
+async function loadOrderAvailability() {
+  if (availabilitySaving) return;
+  $("ordersPaused").disabled = true;
+  $("pauseMessage").disabled = true;
+  $("saveOrderAvailability").disabled = true;
+  $("orderAvailabilityStatus").textContent = "正在讀取接單狀態…";
+  $("orderAvailabilityResult").textContent = "";
+  try {
+    const snapshot = await getDocFromServer(doc(db, "settings", "store"));
+    const data = snapshot.exists() ? snapshot.data() : {};
+    $("ordersPaused").checked = data.ordersPaused === true;
+    $("pauseMessage").value = typeof data.pauseMessage === "string" && data.pauseMessage.trim()
+      ? data.pauseMessage : DEFAULT_PAUSE_MESSAGE;
+    renderOrderAvailabilityStatus($("ordersPaused").checked);
+    $("ordersPaused").disabled = false;
+    $("pauseMessage").disabled = false;
+    $("saveOrderAvailability").disabled = false;
+  } catch (error) {
+    console.error("讀取接單狀態失敗：", error);
+    $("orderAvailabilityStatus").textContent = "無法讀取接單狀態，請確認網路並重新進入訂單管理。";
+  }
+}
+
+$("saveOrderAvailability").addEventListener("click", async () => {
+  if (availabilitySaving || $("saveOrderAvailability").disabled) return;
+  const paused = $("ordersPaused").checked;
+  const message = $("pauseMessage").value.trim();
+  if (!message) {
+    $("orderAvailabilityResult").textContent = "請填寫停單說明。";
+    $("pauseMessage").focus();
+    return;
+  }
+  availabilitySaving = true;
+  $("ordersPaused").disabled = true;
+  $("pauseMessage").disabled = true;
+  $("saveOrderAvailability").disabled = true;
+  $("saveOrderAvailability").textContent = "儲存中…";
+  $("orderAvailabilityResult").textContent = "";
+  try {
+    await setDoc(doc(db, "settings", "store"), {
+      ordersPaused: paused,
+      pauseMessage: message,
+      pauseUpdatedAt: new Date()
+    }, { merge: true });
+    renderOrderAvailabilityStatus(paused);
+    $("orderAvailabilityResult").textContent = paused
+      ? "✅ 已停止接單。前台將顯示停單說明。"
+      : "✅ 已恢復接單。前台可再次送出訂單。";
+  } catch (error) {
+    console.error("儲存接單狀態失敗：", error);
+    $("orderAvailabilityResult").textContent = "❌ 儲存失敗，接單狀態未確認更新，請重新讀取後再試。";
+  } finally {
+    availabilitySaving = false;
+    $("ordersPaused").disabled = false;
+    $("pauseMessage").disabled = false;
+    $("saveOrderAvailability").disabled = false;
+    $("saveOrderAvailability").textContent = "💾 儲存接單狀態與說明";
+  }
+});
 
 /* =========================
    店家資訊

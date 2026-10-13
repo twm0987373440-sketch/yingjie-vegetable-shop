@@ -16,7 +16,10 @@ service cloud.firestore {
     }
     match /orders/{id} {
       // Retain existing guest / LINE-worker checkout. Only the configured admin reads orders.
-      allow create: if request.resource.data.customerName is string
+      // Publish these rules in Firebase Console to block direct API/Worker orders during a pause.
+      allow create: if (!exists(/databases/$(database)/documents/settings/store)
+          || get(/databases/$(database)/documents/settings/store).data.get('ordersPaused', false) != true)
+        && request.resource.data.customerName is string
         && request.resource.data.customerName.size() > 0
         && request.resource.data.customerPhone is string
         && request.resource.data.customerPhone.size() > 0

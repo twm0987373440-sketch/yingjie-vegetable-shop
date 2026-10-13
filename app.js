@@ -11,6 +11,8 @@ import {
   collection,
   getDocs,
   getDoc,
+  getDocFromServer,
+  onSnapshot,
   doc
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js";
 
@@ -1218,6 +1220,60 @@ function renderCart() {
 
 
 /* =========================
+   停止接單與前台通知
+========================= */
+
+const DEFAULT_PAUSE_MESSAGE = "因人手不足無法揀貨";
+let ordersPaused = false;
+let orderAvailabilityReady = false;
+let orderSubmitting = false;
+
+function showPauseDialog() {
+  const dialog = $("orderPauseDialog");
+  if (dialog && !dialog.open && typeof dialog.showModal === "function") {
+    dialog.showModal();
+  }
+}
+
+function updateOrderAvailability(data) {
+  const wasPaused = ordersPaused;
+  ordersPaused = data.ordersPaused === true;
+  orderAvailabilityReady = true;
+  const message = typeof data.pauseMessage === "string" && data.pauseMessage.trim()
+    ? data.pauseMessage : DEFAULT_PAUSE_MESSAGE;
+  $("orderPauseBannerMessage").textContent = message;
+  $("orderPauseDialogMessage").textContent = message;
+  $("orderPauseBanner").hidden = !ordersPaused;
+  $("showOrderPause").hidden = false;
+  $("submit").disabled = ordersPaused || orderSubmitting;
+  if (!orderSubmitting) $("submit").textContent = ordersPaused ? "🛑 目前暫停下單" : "確認送出訂單";
+  if (ordersPaused && !wasPaused) showPauseDialog();
+  if (!ordersPaused && $("orderPauseDialog").open) $("orderPauseDialog").close();
+}
+
+function showOrderAvailabilityError() {
+  orderAvailabilityReady = false;
+  $("orderPauseBanner").hidden = false;
+  $("orderPauseBannerMessage").textContent = "目前無法確認店家是否接受訂單，請稍後再試。";
+  $("showOrderPause").hidden = true;
+  $("submit").disabled = true;
+  $("submit").textContent = "暫時無法確認接單狀態";
+}
+
+function watchOrderAvailability() {
+  if (!db) { showOrderAvailabilityError(); return; }
+  onSnapshot(doc(db, "settings", "store"), snapshot => {
+    updateOrderAvailability(snapshot.exists() ? snapshot.data() : {});
+  }, error => {
+    console.error("訂單接單狀態更新失敗：", error);
+    showOrderAvailabilityError();
+  });
+}
+
+$("showOrderPause").addEventListener("click", showPauseDialog);
+$("closeOrderPause").addEventListener("click", () => $("orderPauseDialog").close());
+
+/* =========================
    送出訂單
 ========================= */
 
@@ -1253,6 +1309,11 @@ if ($("submit")) {
       async () => {
 
         if(!db || !productsReady) { alert("目前無法送出訂單，請確認商品已載入後再試。"); return; }
+        if (ordersPaused) { showPauseDialog(); return; }
+        if (!orderAvailabilityReady || orderSubmitting) {
+          alert("目前正在確認店家接單狀態，請稍後再試。");
+          return;
+        }
         const items = Object.values(cart);
 
 
@@ -1386,6 +1447,7 @@ if ($("submit")) {
         };
 
 
+        orderSubmitting = true;
         $("submit").disabled =
           true;
 
@@ -1396,6 +1458,16 @@ if ($("submit")) {
 
 
         try {
+
+          // Read directly from Firestore before placing the order; refuse stale or offline settings.
+          let freshSettings;
+          try {
+            freshSettings = await getDocFromServer(doc(db, "settings", "store"));
+          } catch (error) {
+            throw new Error("目前無法確認店家是否接受訂單，請檢查網路後重試。");
+          }
+          updateOrderAvailability(freshSettings.exists() ? freshSettings.data() : {});
+          if (ordersPaused) return;
 
           // Keep the same request ID after network errors to prevent duplicate orders.
           const orderPayload = JSON.stringify(order);
@@ -1500,13 +1572,9 @@ if ($("submit")) {
 
         } finally {
 
-          $("submit").disabled =
-            false;
-
-
-          $("submit")
-            .textContent =
-              "確認送出訂單";
+          orderSubmitting = false;
+          $("submit").disabled = ordersPaused || !orderAvailabilityReady;
+          $("submit").textContent = ordersPaused ? "🛑 目前暫停下單" : "確認送出訂單";
 
         }
 
@@ -1584,6 +1652,7 @@ async function start() {
     讀取店家資訊
   */
 
+  watchOrderAvailability();
   const settingsTask = loadStoreSettings();
 
 

@@ -124,3 +124,12 @@ FROM order_notifications ORDER BY created DESC LIMIT 20;
 ```sh
 node worker/order-service.test.mjs
 ```
+
+
+## 後台停止／恢復下單（2026-10-14）
+
+後台登入 → 訂單管理 →「接單開關」可勾選「停止接受新訂單」，更改停單說明，按「儲存接單狀態與說明」才生效；預設維持正常接單，預填說明「因人手不足無法揀貨」。取消勾選再儲存即可恢復。設定會合併寫入 \`settings/store\` 的 \`ordersPaused\`、\`pauseMessage\` 欄位，不會覆蓋店家介紹等其他內容。
+
+前台使用 Firestore 即時監聽設定，停單後顯示醒目公告和彈出視窗，並停用下單按鈕；重新開放後自動恢復。送單前還會向 Firestore 伺服器重新確認狀態，無法連線查證時不送單。舊訂單與商品資料不受影響。
+
+**安全性重要：** 前台阻擋無法取代後端驗證。本次亦更新了 Repository 內的 \`firestore.rules\`，使停單時拒絕建立新訂單，包括直接呼叫 Worker/API 的請求；但 **GitHub 改檔不會部署 Firebase 規則**。需由管理員前往 Firebase Console → Firestore Database → Rules，比對線上現行規則並發布新增的 \`orders\` 建立檢查後，伺服器層級阻擋才正式生效。若設定文件不存在，仍依原規則正常接單。
