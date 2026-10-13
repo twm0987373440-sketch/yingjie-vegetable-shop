@@ -734,8 +734,9 @@ function renderMemberOrders() {
     const number = day + "-" + makeOrderSuffix(order.id);
     const time = validDate ? date.toLocaleString("zh-TW",{timeZone:"Asia/Taipei",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}) : "時間未記錄";
     const steps = ["new","preparing","ready","completed"], current = steps.indexOf(order.status);
+    const pickup = readPickup(order);
     const progress = current < 0 ? "" : '<ol class="order-progress" aria-label="訂單進度">' + steps.map((step,i)=>'<li class="'+(i<=current?'reached':'')+'" '+(i===current?'aria-current="step"':'')+'>'+({new:"已收到",preparing:"備貨中",ready:"可取貨",completed:"已完成"}[step])+'</li>').join("")+'</ol>';
-    return '<article class="member-order-card"><div class="order-card-heading"><b>訂單 '+esc(number)+'</b><span class="order-status">'+status[0]+'</span></div><p class="order-date">'+esc(time)+'</p>'+progress+'<p>'+status[1]+'</p><details><summary>商品明細 · 預估 '+money(order.total)+'</summary><ul class="member-order-items">'+(order.items||[]).map(i=>'<li><span>'+esc(i.name)+' × '+esc(i.qty)+' '+esc(i.unit)+'</span><b>'+(isWeighedOrderItem(i) ? "櫃檯秤重（未計入預估）" : money(Number(i.price)*Number(i.qty)))+'</b></li>').join("")+'</ul>'+(Number(order.discount)>0?'<p>優惠折抵：'+money(order.discount)+'</p>':'')+'<p class="order-total">預估金額（秤重商品另計）：<b>'+money(order.total)+'</b></p>'+(order.note?'<p class="order-note">備註：'+esc(order.note)+'</p>':'')+'</details></article>';
+    return '<article class="member-order-card"><div class="order-card-heading"><b>訂單 '+esc(number)+'</b><span class="order-status">'+status[0]+'</span></div><p class="order-date">'+esc(time)+'</p>'+(pickup.date ? '<p class="order-date">📅 取貨日期：'+esc(pickup.date)+'　🕒 取貨時間：'+esc(pickup.time)+'</p>' : '')+progress+'<p>'+status[1]+'</p><details><summary>商品明細 · 預估 '+money(order.total)+'</summary><ul class="member-order-items">'+(order.items||[]).map(i=>'<li><span>'+esc(i.name)+' × '+esc(i.qty)+' '+esc(i.unit)+'</span><b>'+(isWeighedOrderItem(i) ? "櫃檯秤重（未計入預估）" : money(Number(i.price)*Number(i.qty)))+'</b></li>').join("")+'</ul>'+(Number(order.discount)>0?'<p>優惠折抵：'+money(order.discount)+'</p>':'')+'<p class="order-total">預估金額（秤重商品另計）：<b>'+money(order.total)+'</b></p>'+(pickup.note?'<p class="order-note">備註：'+esc(pickup.note)+'</p>':'')+'</details></article>';
   }).join("");
   $("moreMemberOrders").hidden = selected.length <= memberOrdersShown;
 }
@@ -1220,6 +1221,30 @@ function renderCart() {
    送出訂單
 ========================= */
 
+function taiwanPickupNow() {
+  const now = new Date();
+  return {
+    date: now.toLocaleDateString("sv-SE", { timeZone: "Asia/Taipei" }),
+    time: now.toLocaleTimeString("en-GB", { timeZone: "Asia/Taipei", hour: "2-digit", minute: "2-digit", hour12: false })
+  };
+}
+
+function readPickup(order) {
+  const raw = typeof order?.note === "string" ? order.note : "";
+  const match = /^【取貨日期】(\d{4}-\d{2}-\d{2})\r?\n【取貨時間】(\d{2}:\d{2})(?:\r?\n【備註】([\s\S]*))?$/.exec(raw);
+  return {
+    date: order?.pickupDate || match?.[1] || "",
+    time: order?.pickupTime || match?.[2] || "",
+    note: match ? match[3] || "" : raw
+  };
+}
+
+
+if ($("pickupDate")) {
+  $("pickupDate").min = taiwanPickupNow().date;
+  $("pickupDate").addEventListener("focus", () => { $("pickupDate").min = taiwanPickupNow().date; });
+}
+
 if ($("submit")) {
 
   $("submit")
@@ -1281,6 +1306,31 @@ if ($("submit")) {
         }
 
 
+        const pickupDate = $("pickupDate").value;
+        const pickupTime = $("pickupTime").value;
+        const nowTaiwan = taiwanPickupNow();
+        $("pickupDate").min = nowTaiwan.date;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(pickupDate) ||
+            !/^([01]\d|2[0-3]):[0-5]\d$/.test(pickupTime)) {
+          alert("請填寫取貨日期及取貨時間。");
+          $("pickupDate").focus();
+          return;
+        }
+        if (pickupDate < nowTaiwan.date ||
+            (pickupDate === nowTaiwan.date && pickupTime <= nowTaiwan.time)) {
+          alert("取貨日期與時間不能是過去，請重新選擇。");
+          $("pickupDate").focus();
+          return;
+        }
+        const savedNote = "【取貨日期】" + pickupDate +
+          "\n【取貨時間】" + pickupTime +
+          (note ? "\n【備註】" + note : "");
+        if (savedNote.length > 1000) {
+          alert("備註內容過長，請縮短後再送出。");
+          $("note").focus();
+          return;
+        }
+
         const { subtotal, discount, bundleQty, total } = priceCart(items);
 
 
@@ -1292,7 +1342,7 @@ if ($("submit")) {
           customerPhone:
             phone,
 
-          note,
+          note: savedNote,
 
           items:
             items.map(
@@ -1407,6 +1457,10 @@ if ($("submit")) {
               ${money(total)}
               ${discount ? `<br><small>已套用3包50元優惠，折抵 ${money(discount)}</small>` : ""}
 
+              <br><br>
+              📅 取貨日期：${esc(pickupDate)}<br>
+              🕒 取貨時間：${esc(pickupTime)}
+
               <br>
 
               <small>
@@ -1426,8 +1480,9 @@ if ($("submit")) {
           `;
 
 
-          $("note").value =
-            "";
+          $("note").value = "";
+          $("pickupDate").value = "";
+          $("pickupTime").value = "";
 
 
         } catch (error) {
