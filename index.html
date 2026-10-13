@@ -210,6 +210,18 @@
         </label>
 
 
+        <div class="pickup-fields" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px">
+          <label class="form-label">
+            <span>📅 取貨日期（必填）</span>
+            <input id="pickupDate" type="date" required aria-label="取貨日期">
+          </label>
+          <label class="form-label">
+            <span>🕒 取貨時間（必填）</span>
+            <input id="pickupTime" type="time" required aria-label="取貨時間">
+          </label>
+        </div>
+        <p class="section-description" style="margin-top:0">請選擇希望到店取貨的日期與時間，實際安排依店家確認為準。</p>
+
         <label class="form-label">
 
           <span>
@@ -218,6 +230,7 @@
 
           <textarea
             id="note"
+            maxlength="900"
             rows="3"
             placeholder="如有特殊需求可填寫"
           ></textarea>
@@ -610,7 +623,7 @@
   </dialog>
   <script
     type="module"
-    src="app.js?v=20261013-photos"
+    src="app.js?v=20261014-pickup"
   ></script>
 
 </body>
