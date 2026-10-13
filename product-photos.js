@@ -60,7 +60,98 @@ const paths = new Map([
   ["洋蔥", "images/products/44.webp"],
   ["韓國白菜", "images/products/45.webp"]
 ]);
-export function generatedPhotoFor(name) {
-  const path = paths.get(String(name || "").trim());
-  return path ? new URL(path, import.meta.url).href : "";
+// Allow different merchant spellings, origins and pack sizes to use existing photos.
+// These are catalogue illustrations, never a substitute for merchant-uploaded photos.
+const aliasRules = [
+  [/栗子南瓜|板栗南瓜|日本南瓜|東昇南瓜|南瓜/, "貝貝南瓜"],
+  [/青椒|甜椒|燈籠椒|紅椒|黃椒|綠椒/, "彩椒"],
+  [/辣椒|糯米椒|青龍椒|青龍/, "糯米椒"],
+  [/高麗菜|甘藍菜|包心菜|椰菜/, "高麗菜"],
+  [/青江菜|青梗菜|上海青|湯匙菜/, "青江菜"],
+  [/小白菜|奶油白菜|娃娃菜/, "小白菜"],
+  [/大白菜|結球白菜|山東白菜|包心白菜/, "韓國白菜"],
+  [/菠菜|莧菜|紅鳳菜|茼蒿|春菊|皇宮菜|葉菜/, "皇宮菜"],
+  [/A菜|萵苣|生菜|油麥菜|福山萵苣/, "大陸妹"],
+  [/地瓜葉|番薯葉/, "地瓜葉"],
+  [/空心菜|蕹菜|通菜/, "空心菜"],
+  [/菜心|油菜|小松菜/, "油菜"],
+  [/花椰菜|青花菜|綠花菜|西蘭花/, "青花椰菜"],
+  [/韭黃|韭菜花|韭菜/, "韭菜"],
+  [/青蔥|蔥花|蔥段|三星蔥|香蔥|珠蔥|大蔥/, "青蔥"],
+  [/紅蔥|油蔥頭/, "紅蔥頭"],
+  [/九層塔|羅勒|打拋葉/, "九層塔"],
+  [/香菜|芫荽|胡荽/, "香菜"],
+  [/芹菜|香芹|水芹/, "芹菜"],
+  [/西洋芹|西芹/, "西洋芹"],
+  [/蒜頭|大蒜|蒜瓣|蒜米/, "蒜頭"],
+  [/老薑|生薑|薑母|薑塊/, "老薑"],
+  [/嫩薑|仔薑/, "嫩薑"],
+  [/馬鈴薯|馬鈴瓜|土豆|洋芋/, "馬鈴薯"],
+  [/紅蘿蔔|胡蘿蔔/, "紅蘿蔔"],
+  [/白蘿蔔|菜頭/, "白蘿蔔"],
+  [/洋蔥|蔥頭/, "洋蔥"],
+  [/地瓜|番薯|甘藷|甘薯/, "地瓜"],
+  [/芋頭|芋仔/, "芋頭"],
+  [/牛蒡/, "牛蒡"],
+  [/玉米筍|小玉米/, "玉米筍"],
+  [/紫糯玉米|紫玉米|黑玉米/, "紫米玉米"],
+  [/玉米|苞米/, "黃玉米"],
+  [/小黃瓜|迷你黃瓜|水果小黃瓜/, "小黃瓜"],
+  [/大黃瓜|胡瓜|黃瓜/, "小黃瓜"],
+  [/絲瓜|菜瓜|角瓜/, "絲瓜"],
+  [/苦瓜|涼瓜/, "苦瓜"],
+  [/櫛瓜|節瓜|夏南瓜/, "櫛瓜"],
+  [/茄子|茄瓜/, "茄子"],
+  [/番茄|蕃茄|西紅柿|牛番茄|小番茄|聖女番茄/, "番茄"],
+  [/長豆|豇豆/, "長豆"],
+  [/四季豆|敏豆|菜豆/, "四季豆"],
+  [/豆芽|芽菜|銀芽/, "豆芽菜"],
+  [/秋葵|羊角豆/, "秋葵"],
+  [/蘆筍|露筍/, "蘆筍"],
+  [/金針菇/, "金針菇"],
+  [/杏鮑菇/, "杏鮑菇"],
+  [/香菇|冬菇/, "香菇"],
+  [/鴻喜菇|雪白菇|雙色菇|秀珍菇|美白菇/, "雙色菇"],
+  [/菇|蘑菇|木耳/, "香菇"],
+  [/冬粉|粉絲/, "冬粉"],
+  [/米粉|炊粉/, "米粉"],
+  [/茭白筍|皎白筍|筊白筍|美人腿/, "皎白筍"],
+  [/綠竹筍|麻竹筍|竹筍|筍子/, "竹筍"]
+];
+
+function photoUrl(path) {
+  return new URL(path, import.meta.url).href;
+}
+
+function cleanName(name) {
+  return String(name || "")
+    .normalize("NFKC")
+    .replace(/[（(][^()（）]*[）)]/g, "")
+    .replace(/[\s\u3000.,，、\-–—_]/g, "")
+    .replace(/^(新鮮|嚴選|特選|特級|有機|本土|本地|進口|台灣|臺灣)+/, "");
+}
+
+// Returns a generic produce illustration for an unknown name. Do not show
+// a specific, unrelated vegetable as if it were the customer's product.
+export function fallbackPhotoFor(category = "") {
+  if (category === "leaf") return photoUrl("images/products/bok-choy.webp");
+  if (category === "root") return photoUrl("images/products/09.webp");
+  if (category === "mushroom") return photoUrl("images/products/21.webp");
+  return photoUrl("vegetable-hero.png");
+}
+
+export function generatedPhotoFor(name, category = "") {
+  const clean = cleanName(name);
+  if (paths.has(clean)) return photoUrl(paths.get(clean));
+  // Exact asset names inside expanded product names (e.g. "高麗菜 1顆").
+  const matching = [...paths.keys()]
+    .filter(key => clean.includes(key))
+    .sort((a, b) => b.length - a.length);
+  if (matching.length) return photoUrl(paths.get(matching[0]));
+  for (const [pattern, canonical] of aliasRules) {
+    if (pattern.test(clean) && paths.has(canonical)) {
+      return photoUrl(paths.get(canonical));
+    }
+  }
+  return fallbackPhotoFor(category);
 }
