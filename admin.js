@@ -1,5 +1,5 @@
 import { parsePriceInput, productPriceInput, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
-import { photoSource, categoryOf, compressPhoto } from "./shop-utils.js?v=20261007-weight";
+import { photoSource, categoryOf, inferCategory, compressPhoto } from "./shop-utils.js?v=20261014-auto-category";
 import { generatedPhotoFor } from "./product-photos.js";
 import {
   initializeApp
@@ -549,6 +549,7 @@ $("bulkSave").addEventListener("click", async () => {
 ========================= */
 
 let editingProduct = null;
+let productCategoryManuallySelected = false;
 let pendingPhoto = "";
 let photoBusy = false;
 let savingProduct = false;
@@ -561,6 +562,7 @@ function refreshPhotoPreview() {
   $("removeProductPhoto").disabled = !ownPhoto || photoBusy;
 }
 function editProduct(product) {
+  productCategoryManuallySelected = false;
   editingProduct = product; pendingPhoto = photoSource(product.photo); photoGeneration++;
   const bundle = product.bundle3for50 === true;
   $("editorTitle").textContent = (product.id ? "編輯" : "新增") + (bundle ? "3包50元商品" : "單項商品");
@@ -576,6 +578,14 @@ function editProduct(product) {
   $("productPhoto").value = ""; $("photoMessage").textContent = "";
   refreshPhotoPreview(); $("productEditor").showModal();
 }
+$("productName").addEventListener("input", () => {
+  if (editingProduct && !editingProduct.id && !productCategoryManuallySelected) {
+    $("productCategory").value = inferCategory($("productName").value);
+  }
+});
+$("productCategory").addEventListener("change", () => {
+  productCategoryManuallySelected = true;
+});
 $("cancelProduct").addEventListener("click", () => { if(!photoBusy && !savingProduct) $("productEditor").close(); });
 $("productEditor").addEventListener("cancel", event => { if(photoBusy || savingProduct) event.preventDefault(); });
 $("productEditor").addEventListener("close", () => { photoGeneration++; });
