@@ -1,6 +1,6 @@
 import { isWeighedProduct, displayPrice, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
 import { isBundleProduct, priceCart } from "./bundle-pricing.js?v=20261007-weight";
-import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js?v=20261007-weight";
+import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js?v=20261014-auto-category";
 import { generatedPhotoFor, fallbackPhotoFor } from "./product-photos.js?v=20261003";
 import {
   initializeApp
@@ -852,8 +852,8 @@ function setStatus(text) {
 
 function renderProducts() {
   const visible = products.filter(p => activeCategory === "all" || (activeCategory === "bundle" ? isBundleProduct(p) : categoryOf(p) === activeCategory));
-  $("productsTitle").textContent = activeCategory === "bundle" ? "3包50元專區" : "今日精選";
-  $("productsDescription").textContent = activeCategory === "bundle" ? "專區商品任選混搭，每滿3包50元；其餘每包20元。" : "選擇數量後加入購物車";
+  $("productsTitle").textContent = activeCategory === "bundle" ? "3包50元專區" : activeCategory === "all" ? "今日新鮮・全部商品" : "今日精選";
+  $("productsDescription").textContent = activeCategory === "bundle" ? "專區商品任選混搭，每滿3包50元；其餘每包20元。" : activeCategory === "all" ? "顯示全部上架商品，選擇數量後加入購物車" : "選擇數量後加入購物車";
   $("products").innerHTML = visible.map(p => {
     const qty = cart[p.id]?.qty || 0;
     const ownPhoto = photoSource(p.photo);
