@@ -1223,7 +1223,7 @@ function renderCart() {
    停止接單與前台通知
 ========================= */
 
-const DEFAULT_PAUSE_MESSAGE = "因人手不足無法揀貨";
+const DEFAULT_PAUSE_MESSAGE = "因人力不足無法揀貨";
 let ordersPaused = false;
 let orderAvailabilityReady = false;
 let orderSubmitting = false;
