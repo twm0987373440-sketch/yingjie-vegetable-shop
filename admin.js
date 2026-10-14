@@ -1262,7 +1262,7 @@ async function deleteOrder(id) {
    接單狀態（存放於 settings/store）
 ========================= */
 
-const DEFAULT_PAUSE_MESSAGE = "因人手不足無法揀貨";
+const DEFAULT_PAUSE_MESSAGE = "因人力不足無法揀貨";
 let availabilitySaving = false;
 
 function renderOrderAvailabilityStatus(paused) {
