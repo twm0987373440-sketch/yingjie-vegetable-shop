@@ -1,6 +1,6 @@
 import { parsePriceInput, productPriceInput, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
 import { photoSource, categoryOf, inferCategory, compressPhoto } from "./shop-utils.js?v=20261014-auto-category";
-import { generatedPhotoFor } from "./product-photos.js";
+import { generatedPhotoFor } from "./product-photos.js?v=20261018-accurate";
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
@@ -1596,3 +1596,4 @@ $("saveStoreSettings")
 
     }
   );
+
