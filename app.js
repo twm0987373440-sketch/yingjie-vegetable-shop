@@ -1,7 +1,7 @@
 import { isWeighedProduct, displayPrice, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
 import { isBundleProduct, priceCart } from "./bundle-pricing.js?v=20261007-weight";
 import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js?v=20261014-auto-category";
-import { generatedPhotoFor, fallbackPhotoFor } from "./product-photos.js?v=20261003";
+import { generatedPhotoFor } from "./product-photos.js?v=20261018-accurate";
 import {
   initializeApp
 } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
@@ -860,7 +860,7 @@ function renderProducts() {
     const photo = ownPhoto || generatedPhotoFor(p.name, categoryOf(p));
     return `<article class="card">
       <button class="product-photo" type="button" data-photo-id="${esc(p.id)}" aria-label="放大${esc(p.name)}照片" ${photo ? "" : "disabled"}>
-        ${photo ? `<img src="${esc(photo)}" alt="${esc(p.name)}" loading="lazy" decoding="async">${!ownPhoto ? '<span class="generated-photo-label">示意圖</span>' : ""}` : `<span class="photo-placeholder"><span>${esc(p.emoji || "🥬")}</span><small>照片準備中</small></span>`}
+        ${photo ? `<img src="${esc(photo)}" alt="${esc(p.name)}" loading="lazy" decoding="async">${!ownPhoto ? '<span class="generated-photo-label">示意圖</span>' : ""}` : `<span class="photo-placeholder"><span>📷</span><small>照片準備中</small></span>`}
       </button>
       <div class="product-info"><h3>${esc(p.name)}</h3>${isBundleProduct(p) ? '<span class="bundle-badge">任選3包50元</span>' : ""}<div class="product-bottom"><div class="price">${esc(displayPrice(p))} <small>/ ${esc(p.unit || "份")}</small></div>
       <div class="qty"><button class="qty-minus" data-id="${esc(p.id)}" type="button" aria-label="減少${esc(p.name)}" ${qty ? "" : "disabled"}>−</button><b>${qty}</b><button class="qty-plus" data-id="${esc(p.id)}" type="button" aria-label="增加${esc(p.name)}">＋</button></div></div></div>
@@ -868,13 +868,8 @@ function renderProducts() {
   }).join("") || (activeCategory === "bundle" ? '<p class="category-empty">專區商品準備中，敬請期待</p>' : '<p class="category-empty">此分類目前沒有商品</p>');
   $("products").querySelectorAll("img").forEach(img => img.addEventListener("error", () => {
     const button = img.closest("button");
-    if (!img.dataset.fallbackAttempted) {
-      img.dataset.fallbackAttempted = "1";
-      img.src = fallbackPhotoFor();
-      return;
-    }
     button.disabled = true;
-    button.innerHTML = '<span class="photo-placeholder"><span>🥬</span><small>照片暫時無法顯示</small></span>';
+    button.innerHTML = '<span class="photo-placeholder"><span>📷</span><small>照片暫時無法顯示</small></span>';
   }));
   renderCart();
 }
@@ -1676,3 +1671,4 @@ async function start() {
 
 
 start();
+
