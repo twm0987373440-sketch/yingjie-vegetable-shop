@@ -43,7 +43,7 @@ const paths = new Map([
   ["黃玉米", "images/products/07.webp"],
   ["大陸妹", "images/products/08.webp"],
   ["馬鈴薯", "images/products/09.webp"],
-  ["紫米玉米", "images/products/10.webp"],
+  ["紫米玉米", "images/products/waxy-corn-20261019.webp"],
   ["白蘿蔔", "images/products/11.webp"],
   ["彩椒", "images/products/12.webp"],
   ["青蔥", "images/products/13.webp"],
