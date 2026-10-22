@@ -28,6 +28,22 @@
 .bulk-toolbar{position:sticky;bottom:0;background:#fff;padding:12px 0 max(12px,env(safe-area-inset-bottom));border-top:1px solid #ddd;z-index:5}
 .bulk-toolbar p{margin:0 0 10px}.bulk-toolbar button{margin-bottom:8px}
 @media(max-width:380px){.bulk-product{grid-template-columns:minmax(0,1fr) 100px 64px;gap:6px}}
+#priceListImage{display:block;width:100%;height:auto;margin-top:16px;background:#f8f6ee}
+#priceListImage[hidden],#priceListDownload[hidden]{display:none!important}
+.price-list-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+#priceListDownload{text-decoration:none;display:inline-block;text-align:center}
+#priceListDetails{margin-top:16px}
+@media print{
+ @page{size:A4 portrait;margin:8mm}
+ body.shop-admin{background:white!important;margin:0!important;padding:0!important}
+ body.shop-admin>*{display:none!important}
+ body.shop-admin>main{display:block!important;margin:0!important;padding:0!important;max-width:none!important}
+ #panel{display:block!important;margin:0!important;padding:0!important}
+ #panel>section{display:none!important}
+ #panel>#priceListPanel{display:block!important;border:0!important;margin:0!important;padding:0!important;box-shadow:none!important;background:white!important}
+ #priceListPanel>*{display:none!important}
+ #priceListPanel>#priceListImage:not([hidden]){display:block!important;width:100%!important;height:auto!important;max-height:275mm;object-fit:contain;margin:0!important}
+}
 </style></head>
 
 
@@ -182,6 +198,7 @@
             🏪 店家資訊
           </button>
 
+          <button id="priceListTab" class="secondary-button" type="button">📋 價目表</button>
         </div>
 
 
@@ -200,6 +217,19 @@
       </section>
 
 
+
+      <section id="priceListPanel" class="panel" hidden>
+        <h2>📋 單項商品價目表</h2>
+        <p>只列出已上架的單項商品，不包含3包50元專區。改價後請先儲存，再開啟本頁或按「更新價目表」。</p>
+        <div class="price-list-actions">
+          <button id="priceListRefresh" type="button" class="secondary-button">更新價目表</button>
+          <a id="priceListDownload" class="primary-button" hidden download>下載圖片</a>
+          <button id="priceListPrint" type="button" class="secondary-button" disabled>列印／存成 PDF</button>
+        </div>
+        <p id="priceListStatus" role="status" aria-live="polite"></p>
+        <img id="priceListImage" alt="最新單項商品價目表" hidden>
+        <details id="priceListDetails"><summary>查看文字明細</summary><div id="priceListText"></div></details>
+      </section>
 
       <!-- =========================
            商品管理
@@ -489,7 +519,7 @@
 
   <script
     type="module"
-    src="admin.js?v=20261022-groups"
+    src="admin.js?v=20261022-price-list"
   ></script>
 
 </body>

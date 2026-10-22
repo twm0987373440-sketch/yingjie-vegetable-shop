@@ -1,3 +1,4 @@
+import { mountPriceList } from "./admin-price-list.js?v=20261022-price-list";
 import { parsePriceInput, productPriceInput, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
 import { photoSource, categoryOf, inferCategory, compressPhoto } from "./shop-utils.js?v=20261022-groups";
 import { generatedPhotoFor } from "./product-photos.js?v=20261019-waxy-corn";
@@ -10,6 +11,7 @@ import {
   writeBatch,
   collection,
   getDocs,
+  getDocsFromServer,
   getDoc,
   getDocFromServer,
   addDoc,
@@ -317,6 +319,7 @@ onAuthStateChanged(
 let productSection = "single";
 
 function showAdminPage(page) {
+  $("priceListPanel").hidden = page !== "priceList";
 
   $("productsPanel").hidden =
     page !== "products";
@@ -1569,3 +1572,19 @@ $("saveStoreSettings")
     }
   );
 
+
+// Fetch confirmed saved data whenever the price-list tab is opened.
+mountPriceList({
+  canOpen: () => auth.currentUser?.uid === ADMIN_UID && allowProductAction(),
+  show: () => showAdminPage("priceList"),
+  load: async () => {
+    const [products, settings] = await Promise.all([
+      getDocsFromServer(collection(db, "products")),
+      getDocFromServer(doc(db, "settings", "store"))
+    ]);
+    return {
+      products: products.docs.map(item => ({...item.data(), id: item.id})),
+      storeName: settings.data()?.storeName || DEFAULT_STORE_SETTINGS.storeName
+    };
+  }
+});
