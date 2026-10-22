@@ -1,6 +1,6 @@
 import { isWeighedProduct, displayPrice, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
 import { isBundleProduct, priceCart } from "./bundle-pricing.js?v=20261007-weight";
-import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js?v=20261014-auto-category";
+import { photoSource, categoryOf, cartProduct, reconcileCart } from "./shop-utils.js?v=20261022-groups";
 import { generatedPhotoFor } from "./product-photos.js?v=20261019-waxy-corn";
 import {
   initializeApp
@@ -850,8 +850,14 @@ function setStatus(text) {
    商品畫面
 ========================= */
 
+function productGroupRank(p) {
+  if (isBundleProduct(p)) return 3;
+  return ({leaf: 0, root: 1, gourd: 2, mushroom: 4, fruit: 5, other: 6})[categoryOf(p)] ?? 6;
+}
+
 function renderProducts() {
-  const visible = products.filter(p => activeCategory === "all" || (activeCategory === "bundle" ? isBundleProduct(p) : categoryOf(p) === activeCategory));
+  const visible = products.filter(p => activeCategory === "all" || (activeCategory === "bundle" ? isBundleProduct(p) : categoryOf(p) === activeCategory))
+    .sort((a, b) => productGroupRank(a) - productGroupRank(b) || (a.sort ?? 999) - (b.sort ?? 999) || String(a.name).localeCompare(String(b.name), "zh-Hant") || String(a.id).localeCompare(String(b.id)));
   $("productsTitle").textContent = activeCategory === "bundle" ? "3包50元專區" : activeCategory === "all" ? "今日新鮮・全部商品" : "今日精選";
   $("productsDescription").textContent = activeCategory === "bundle" ? "專區商品任選混搭，每滿3包50元；其餘每包20元。" : activeCategory === "all" ? "顯示全部上架商品，選擇數量後加入購物車" : "選擇數量後加入購物車";
   $("products").innerHTML = visible.map(p => {

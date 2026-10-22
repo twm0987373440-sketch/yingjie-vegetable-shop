@@ -9,11 +9,13 @@ export function inferCategory(name) {
   if (/菇|木耳|銀耳/.test(name)) return "mushroom";
   if (/蘿蔔|萝卜|馬鈴薯|土豆|洋蔥|地瓜|番薯|甘薯|薑|姜|蒜頭|大蒜|芋|蓮藕|山藥|牛蒡|竹筍|筊白筍|茭白筍|荸薺/.test(name)) return "root";
   if (/蘋果|香蕉|橘|桔|橙|柑|檸檬|葡萄|芒果|鳳梨|西瓜|木瓜|草莓|芭樂|番石榴|梨|桃|奇異果|火龍果|百香果|哈密瓜|香瓜|荔枝|龍眼|柿子|櫻桃|藍莓|酪梨/.test(name)) return "fruit";
-  if (/花椰菜|青花菜|高麗菜|白菜|青江菜|小松菜|空心菜|菠菜|地瓜葉|莧菜|萵苣|生菜|油菜|芥菜|芥藍|茼蒿|韭菜|芹菜|香菜|九層塔|蔥|葱|菜/.test(name)) return "leaf";
+  if (/小黃瓜|大黃瓜|胡瓜|黃瓜|絲瓜|苦瓜|南瓜|冬瓜|櫛瓜|節瓜|瓠瓜|蒲瓜|佛手瓜|隼人瓜|扁蒲|越瓜/.test(name)) return "gourd";
+  if (/大陸妹|花椰菜|青花菜|高麗菜|白菜|青江菜|小松菜|空心菜|菠菜|地瓜葉|莧菜|萵苣|生菜|油菜|芥菜|芥藍|茼蒿|韭菜|芹菜|香菜|九層塔|蔥|葱|菜/.test(name)) return "leaf";
   return "other";
 }
 export function categoryOf(product) {
-  if (["leaf", "root", "mushroom", "fruit", "other"].includes(product.category)) return product.category;
+  // Older products stored as "other" can now resolve to the added categories.
+  if (["leaf", "root", "gourd", "mushroom", "fruit"].includes(product.category)) return product.category;
   return inferCategory(product.name);
 }
 // Do not copy photos into the persisted cart or order payload.

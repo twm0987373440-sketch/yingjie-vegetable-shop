@@ -1,5 +1,5 @@
 import { parsePriceInput, productPriceInput, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
-import { photoSource, categoryOf, inferCategory, compressPhoto } from "./shop-utils.js?v=20261014-auto-category";
+import { photoSource, categoryOf, inferCategory, compressPhoto } from "./shop-utils.js?v=20261022-groups";
 import { generatedPhotoFor } from "./product-photos.js?v=20261019-waxy-corn";
 import {
   initializeApp
@@ -926,40 +926,12 @@ async function loadOrders() {
                   );
 
 
-                const price =
-                  Number(
-                    item.price ||
-                    0
-                  );
-
-
-                return `
-
-                  <div>
-
-                    ${esc(
-                      item.name ||
-                      ""
-                    )}
-
-                    × ${qty}
-
-                    ${
-                      item.unit
-                        ? " " +
-                          esc(
-                            item.unit
-                          )
-                        : ""
-                    }
-
-                    ｜
-
-                    ${isWeighedOrderItem(item) ? "櫃檯秤重（未計入預估）" : money(price * qty)}
-
-                  </div>
-
-                `;
+                // Only simplify the admin display; retain saved names for customers.
+                let name = String(item.name || "");
+                if (isWeighedOrderItem(item)) {
+                  name = name.replace(/^【櫃檯秤重】/, "").replace(/（[^（）]*）$/, "").trim();
+                }
+                return `<div>${esc(name)} × ${qty}${esc(item.unit || "")}</div>`;
 
               })
               .join("");
