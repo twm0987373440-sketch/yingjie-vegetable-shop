@@ -1,4 +1,4 @@
-import { mountPriceList } from "./admin-price-list.js?v=20261022-price-list";
+import { mountPriceList } from "./admin-price-list.js?v=20261023-photo-price-list";
 import { parsePriceInput, productPriceInput, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
 import { photoSource, categoryOf, inferCategory, compressPhoto } from "./shop-utils.js?v=20261022-groups";
 import { generatedPhotoFor } from "./product-photos.js?v=20261019-waxy-corn";
@@ -1588,3 +1588,4 @@ mountPriceList({
     };
   }
 });
+
