@@ -221,6 +221,13 @@
       <section id="priceListPanel" class="panel" hidden>
         <h2>📋 單項商品價目表</h2>
         <p>只列出已上架的單項商品，不包含3包50元專區。改價後請先儲存，再開啟本頁或按「更新價目表」。</p>
+        <section aria-labelledby="marketPriceTitle">
+          <h3 id="marketPriceTitle">時價商品價格（列印／下載專用）</h3>
+          <p>前台仍顯示「時價」。在這裡填入今日價格，儲存後會顯示於價目表、下載圖片及列印 PDF。留白則維持時價。</p>
+          <div id="marketPriceFields"></div>
+          <button id="marketPriceSave" type="button" class="primary-button" disabled>儲存並更新價目表</button>
+          <p id="marketPriceStatus" role="status" aria-live="polite"></p>
+        </section>
         <div class="price-list-actions">
           <button id="priceListRefresh" type="button" class="secondary-button">更新價目表</button>
           <a id="priceListDownload" class="primary-button" hidden download>下載圖片</a>
@@ -519,11 +526,12 @@
 
   <script
     type="module"
-    src="admin.js?v=20261023-photo-price-list"
+    src="admin.js?v=20261028-market-print"
   ></script>
 
 </body>
 
 </html>
+
 
 

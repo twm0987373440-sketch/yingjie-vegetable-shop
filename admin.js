@@ -1,4 +1,4 @@
-import { mountPriceList } from "./admin-price-list.js?v=20261023-photo-price-list";
+import { mountPriceList } from "./admin-price-list.js?v=20261028-market-print";
 import { parsePriceInput, productPriceInput, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
 import { photoSource, categoryOf, inferCategory, compressPhoto } from "./shop-utils.js?v=20261022-groups";
 import { generatedPhotoFor } from "./product-photos.js?v=20261019-waxy-corn";
@@ -1577,6 +1577,15 @@ $("saveStoreSettings")
 mountPriceList({
   canOpen: () => auth.currentUser?.uid === ADMIN_UID && allowProductAction(),
   show: () => showAdminPage("priceList"),
+  save: async changes => {
+    if (auth.currentUser?.uid !== ADMIN_UID) throw Error("請重新登入管理員。");
+    if (changes.length > 500) throw Error("一次最多儲存500項商品。");
+    const batch = writeBatch(db);
+    for (const {id, printPrice} of changes) {
+      batch.update(doc(db, "products", id), {printPrice});
+    }
+    await batch.commit();
+  },
   load: async () => {
     const [products, settings] = await Promise.all([
       getDocsFromServer(collection(db, "products")),
@@ -1588,4 +1597,5 @@ mountPriceList({
     };
   }
 });
+
 

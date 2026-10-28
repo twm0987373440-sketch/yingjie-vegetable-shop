@@ -1,13 +1,26 @@
 import { generatedPhotoFor } from "./product-photos.js?v=20261019-waxy-corn";
 import { categoryOf, photoSource } from "./shop-utils.js?v=20261022-groups";
-import { displayPrice } from "./price-utils.js?v=20261007-weight";
+import { displayPrice, parsePriceInput } from "./price-utils.js?v=20261007-weight";
 
+export function isMarketPrice(p) {
+  return typeof p?.priceLabel === "string" && p.priceLabel.includes("時價");
+}
+export function parsePrintPrice(value) {
+  if (!String(value ?? "").trim()) return null;
+  const parsed = parsePriceInput(value);
+  if (parsed.priceLabel) throw Error("請填入0～100000元的數字，最多兩位小數；留白則顯示時價。");
+  return parsed.price;
+}
+export function printedPrice(p) {
+  return isMarketPrice(p) && typeof p.printPrice === "number" && Number.isFinite(p.printPrice) && p.printPrice >= 0 && p.printPrice <= 100000
+    ? displayPrice({price: p.printPrice}) : displayPrice(p);
+}
 const groups = [["leaf","葉菜類"],["root","根莖類"],["gourd","瓜類"],["mushroom","菇類"],["fruit","水果"],["other","其他商品"]];
 export function priceListRows(products) {
   return groups.flatMap(([key, label]) => {
     const items = products.filter(p => p.active !== false && p.bundle3for50 !== true && categoryOf(p) === key)
       .sort((a,b) => (a.sort ?? 999) - (b.sort ?? 999) || String(a.name).localeCompare(String(b.name), "zh-Hant"));
-    return items.length ? [{heading: label}, ...items.map(p => ({name: String(p.name || ""), price: displayPrice(p), unit: String(p.unit || "份"), photo: photoSource(p.photo) || generatedPhotoFor(p.name)}))] : [];
+    return items.length ? [{heading: label}, ...items.map(p => ({name: String(p.name || ""), price: printedPrice(p), unit: String(p.unit || "份"), photo: photoSource(p.photo) || generatedPhotoFor(p.name)}))] : [];
   });
 }
 
@@ -110,9 +123,56 @@ export function priceListCanvas(rows, storeName, timestamp, photos = new Map()) 
   return canvas;
 }
 
-export function mountPriceList({load, canOpen, show}) {
+export function mountPriceList({load, save, canOpen, show}) {
   const $ = id => document.getElementById(id);
-  let busy=false, url="", generation=0;
+  let busy=false, url="", generation=0, drafts=[];
+  const dirty = () => drafts.filter(d => d.input.value !== d.original);
+  function renderEditor(products) {
+    drafts=[];
+    $("marketPriceFields").replaceChildren();
+    const items=products.filter(p => p.bundle3for50 !== true && isMarketPrice(p))
+      .sort((a,b)=>(a.sort ?? 999)-(b.sort ?? 999));
+    for(const p of items) {
+      const label=document.createElement("label"); label.className="form-label";
+      const name=document.createElement("span");
+      name.textContent=p.name+"／"+(p.unit || "份")+(p.active === false ? "（下架中）" : "");
+      const input=document.createElement("input");
+      input.type="text"; input.inputMode="decimal"; input.placeholder="留白顯示時價";
+      input.value=typeof p.printPrice === "number" ? String(p.printPrice) : "";
+      drafts.push({id:p.id, name:p.name, input, original:input.value});
+      input.addEventListener("input",()=>{
+        clear();
+        $("marketPriceSave").disabled=!dirty().length;
+        $("marketPriceStatus").textContent="價格已修改，請按「儲存並更新價目表」。";
+      });
+      label.append(name,input); $("marketPriceFields").append(label);
+    }
+    $("marketPriceSave").disabled=true;
+    $("marketPriceStatus").textContent=items.length ? `共 ${items.length} 項時價商品，之後新增的時價商品會自動列入。` : "目前沒有時價商品。";
+  }
+  $("marketPriceSave").addEventListener("click",async()=>{
+    if(busy || !canOpen() || !dirty().length) return;
+    let changes;
+    try { changes=dirty().map(d=>({id:d.id, printPrice:parsePrintPrice(d.input.value)})); }
+    catch(error) { $("marketPriceStatus").textContent=error.message; return; }
+    busy=true;
+    $("marketPriceSave").disabled=true; $("priceListRefresh").disabled=true;
+    drafts.forEach(d=>d.input.disabled=true);
+    $("marketPriceStatus").textContent="正在儲存…";
+    let saved=false;
+    try {
+      await save(changes);
+      drafts.forEach(d=>d.original=d.input.value);
+      saved=true;
+    } catch(error) {
+      $("marketPriceStatus").textContent="儲存失敗，輸入仍保留，請重試："+error.message;
+    } finally {
+      busy=false; $("priceListRefresh").disabled=false;
+      drafts.forEach(d=>d.input.disabled=false);
+      $("marketPriceSave").disabled=!dirty().length;
+    }
+    if(saved) await refresh();
+  });
   function clear() {
     if(url) URL.revokeObjectURL(url);
     url=""; $("priceListImage").removeAttribute("src"); $("priceListImage").hidden=true;
@@ -121,11 +181,16 @@ export function mountPriceList({load, canOpen, show}) {
   }
   async function refresh() {
     if(busy || !canOpen()) return;
-    show(); busy=true; const current=++generation; clear();
+    show();
+    if(dirty().length) {
+      $("marketPriceStatus").textContent="您有尚未儲存的價格，請先按「儲存並更新價目表」。";
+      return;
+    } busy=true; const current=++generation; clear();
     $("priceListRefresh").disabled=true;
     $("priceListStatus").textContent="正在讀取最新價格…";
     try {
       const {products,storeName}=await load();
+      renderEditor(products);
       const rows=priceListRows(products);
       if(!rows.length) { $("priceListStatus").textContent="目前沒有已上架的單項商品。"; return; }
       await document.fonts.ready;
@@ -154,6 +219,7 @@ export function mountPriceList({load, canOpen, show}) {
   $("priceListTab").addEventListener("click",refresh);
   $("priceListRefresh").addEventListener("click",refresh);
   $("priceListPrint").addEventListener("click",() => { if(url) window.print(); });
-  window.addEventListener("beforeunload",() => { if(url) URL.revokeObjectURL(url); });
+  window.addEventListener("beforeunload",event => { if(busy || dirty().length) { event.preventDefault(); event.returnValue=""; } if(url) URL.revokeObjectURL(url); });
 }
+
 
