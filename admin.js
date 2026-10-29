@@ -1,3 +1,4 @@
+import { mountOrderNotifications } from "./order-notifications.js?v=20261028";
 import { mountPriceList } from "./admin-price-list.js?v=20261028-market-print";
 import { parsePriceInput, productPriceInput, orderItemName, isWeighedOrderItem } from "./price-utils.js?v=20261007-weight";
 import { photoSource, categoryOf, inferCategory, compressPhoto } from "./shop-utils.js?v=20261022-groups";
@@ -256,9 +257,12 @@ $("logoutBtn")
    監聽登入狀態
 ========================= */
 
+const orderNotifications = mountOrderNotifications(auth, ADMIN_UID);
+
 onAuthStateChanged(
   auth,
   async user => {
+    orderNotifications.refresh();
 
     if (
       user &&
@@ -274,7 +278,7 @@ onAuthStateChanged(
 
 
       showAdminPage(
-        "products"
+        new URLSearchParams(location.search).get("view") === "orders" ? "orders" : "products"
       );
 
 

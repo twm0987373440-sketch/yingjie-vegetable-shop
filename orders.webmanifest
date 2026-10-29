@@ -1,0 +1,15 @@
+{
+ "id":"./admin.html?app=orders",
+ "name":"英姐訂單",
+ "short_name":"英姐訂單",
+ "lang":"zh-Hant",
+ "start_url":"./admin.html?view=orders",
+ "scope":"./",
+ "display":"standalone",
+ "background_color":"#263b2e",
+ "theme_color":"#263b2e",
+ "icons":[
+  {"src":"order-icon-192.png","sizes":"192x192","type":"image/png","purpose":"any"},
+  {"src":"order-icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+ ]
+}

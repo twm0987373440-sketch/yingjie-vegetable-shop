@@ -3,6 +3,11 @@
 
 <head>
   <meta charset="UTF-8">
+  <link rel="manifest" href="orders.webmanifest">
+  <link rel="apple-touch-icon" href="order-icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="英姐訂單">
+  <meta name="theme-color" content="#263b2e">
 
   <meta
     name="viewport"
@@ -83,6 +88,17 @@
 
 
   <main class="app-main">
+    <section id="orderNotifications" class="panel" aria-labelledby="pushTitle">
+      <h2 id="pushTitle">🔔 英姐訂單・手機通知</h2>
+      <p>將後台加入手機主畫面，有新訂單時提醒你。通知不顯示客人的姓名或電話。</p>
+      <p id="pushStatus" role="status" aria-live="polite">正在檢查通知功能…</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button id="pushEnable" type="button" class="primary-button" disabled>啟用這部手機通知</button>
+        <button id="pushTest" type="button" class="secondary-button" disabled>傳送測試通知</button>
+        <button id="pushDisable" type="button" class="secondary-button" disabled>停止這部手機通知</button>
+      </div>
+      <small>測試通知不會建立訂單。登出後通知仍會保留；共用裝置請先停止通知再登出。提醒可能受網路與專注模式影響。</small>
+    </section>
 
 
     <!-- =========================
@@ -526,7 +542,7 @@
 
   <script
     type="module"
-    src="admin.js?v=20261028-market-print"
+    src="admin.js?v=20261028-web-push"
   ></script>
 
 </body>

@@ -133,3 +133,20 @@ node worker/order-service.test.mjs
 前台使用 Firestore 即時監聽設定，停單後顯示醒目公告和彈出視窗，並停用下單按鈕；重新開放後自動恢復。送單前還會向 Firestore 伺服器重新確認狀態，無法連線查證時不送單。舊訂單與商品資料不受影響。
 
 **安全性重要：** 前台阻擋無法取代後端驗證。本次亦更新了 Repository 內的 \`firestore.rules\`，使停單時拒絕建立新訂單，包括直接呼叫 Worker/API 的請求；但 **GitHub 改檔不會部署 Firebase 規則**。需由管理員前往 Firebase Console → Firestore Database → Rules，比對線上現行規則並發布新增的 \`orders\` 建立檢查後，伺服器層級阻擋才正式生效。若設定文件不存在，仍依原規則正常接單。
+
+## 英姐訂單桌面圖示與 Web Push（2026-10-28）
+
+Safari 開啟 `admin.html?view=orders` → 分享 → 加入主畫面 → 名稱「英姐訂單」。從桌面開啟、登入管理員後，按「啟用這部手機通知」並允許通知，再按「傳送測試通知」。測試不建立訂單。只有已驗證的既有 Firebase 管理員可以註冊、測試或刪除訂閱。登出不自動停止通知，共用裝置應先按停止通知。
+
+- `orders.webmanifest`、`order-icon-*.png`：安裝名稱及圖示；圖示為程式繪製的菜籃。
+- `order-sw.js`：收到推播即顯示通用通知，點擊開啟訂單頁；無 fetch/cache 攔截，不快取訂單或登入憑證。
+- `order-notifications.js`：iPhone 安裝提示、通知權限、裝置綁定／停用及測試。
+- `worker/web-push.mjs`：Firebase 管理員驗證、限制推播目的地主機、VAPID ES256 簽章、D1 裝置與逐訂單發送紀錄。使用空 payload Web Push，不傳顧客姓名、電話、金額或訂單內容。
+- 正式 Worker 入口留在 Cloudflare，保留登入、會員訂單與既有 LINE 通知；匯入新增通知模組，掛上 `/push/*`、存單成功推播與 cron 重試。完整正式入口未公開至此 Repository，勿以舊 README 範例覆蓋。
+- 新 Secret：`WEB_PUSH_PRIVATE_JWK`（P-256 私鑰），不得提交 Git；沿用既有 `ORDER_DB` 及五分鐘 cron。資料表 `web_push_devices`、`web_push_jobs`。不需 Firebase Blaze，不變更 Firestore 規則。
+- 即時發送失敗會由原 cron 補送；不補發綁定前的歷史訂單。最長重試24小時、最多12次，過期裝置停用，發送紀錄保留7天。推播服務接受不等於手機已顯示；網路、系統通知權限、專注模式可能影響到達時間。
+- 所有訂單共用一張通知卡，後來的新單會更新該通知，未實作未讀數量角標。
+
+隔離測試：`node order-notifications.test.mjs`、`node worker/web-push.test.mjs`。另跑既有 order-service、member-orders、text-prices、market-print 測試。手機最後驗收需從 iPhone 桌面 App 綁定，確認背景／鎖定畫面收到測試與新單提醒；未完成前不可宣稱手機端驗收通過。
+
+部署時保留既有 bindings、compatibility date、observability 與排程，使用 multipart 上傳 `production.mjs`、`web-push.mjs`。回滾使用 Cloudflare 先前部署版本；GitHub Pages 可回退本次提交。回退不應刪除商品或訂單。
