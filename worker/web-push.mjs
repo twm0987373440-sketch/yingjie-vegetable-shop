@@ -45,7 +45,9 @@ async function sendWebPush(env,endpoint,topic,fetcher=fetch) {
  const unsigned=encode({typ:'JWT',alg:'ES256'})+'.'+encode({aud:new URL(endpoint).origin,exp:Math.floor(Date.now()/1000)+3600,sub:PUSH_ORIGIN+'/yingjie-vegetable-shop/'});
  const key=await crypto.subtle.importKey('jwk',jwk,{name:'ECDSA',namedCurve:'P-256'},false,['sign']);
  const signature=pushB64(await crypto.subtle.sign({name:'ECDSA',hash:'SHA-256'},key,pushEncode(unsigned)));
- return fetcher(endpoint,{method:'POST',headers:{Authorization:`vapid t=${unsigned}.${signature}, k=${publicKey}`,TTL:'86400',Urgency:'high',Topic:topic.slice(0,32)},body:new Uint8Array(0),redirect:'error',signal:AbortSignal.timeout(10000)});
+ // Workers does not implement redirect:'error'. Manual returns 3xx without
+ // forwarding the VAPID Authorization header to another destination.
+ return fetcher(endpoint,{method:'POST',headers:{Authorization:`vapid t=${unsigned}.${signature}, k=${publicKey}`,TTL:'86400',Urgency:'high',Topic:topic.slice(0,32)},body:new Uint8Array(0),redirect:'manual',signal:AbortSignal.timeout(10000)});
 }
 async function webPushApi(request,env) {
  const path=new URL(request.url).pathname;
@@ -84,7 +86,7 @@ async function webPushApi(request,env) {
   const response=await sendWebPush(env,endpoint,'yingjie-test');
   if(!response.ok) return pushJson({ok:false,error:'推播服務未接受測試，請停用後重新啟用。'},503);
   return pushJson({ok:true,message:'測試已送交推播服務。請確認手機收到「收到新訂單」提醒；這不會建立訂單。'});
- } catch { return pushJson({ok:false,error:'通知服務暫時無法使用，請稍後重試。'},503); }
+ } catch(e) { console.error('WEB_PUSH_API_ERROR',e.name); return pushJson({ok:false,error:'通知服務暫時無法使用，請稍後重試。'},503); }
 }
 async function enqueueWebPush(env,row) {
  if(!env.WEB_PUSH_PRIVATE_JWK||!row.saved) return;

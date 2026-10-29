@@ -15,7 +15,7 @@ let pushes=0,mode=201,authMode='admin';
 globalThis.fetch=async(url,options)=>{
  if(url.includes('identitytoolkit'))return Response.json({users:[{localId:authMode==='admin'?'r8lFDyFoDTUffnwN6waBm0cMlHl1':'other'}]});
  pushes++;
- assert.equal(url,endpoint);assert.equal(options.body.byteLength,0);assert.equal(options.redirect,'error');
+ assert.equal(url,endpoint);assert.equal(options.body.byteLength,0);assert.equal(options.redirect,'manual');
  const m=options.headers.Authorization.match(/^vapid t=(.+), k=(.+)$/);assert.ok(m);
  const [h,p,s]=m[1].split('.');const claims=JSON.parse(Buffer.from(p,'base64url'));
  assert.equal(claims.aud,'https://web.push.apple.com');assert.ok(claims.exp>Date.now()/1000);
